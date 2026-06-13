@@ -1004,7 +1004,7 @@ async function pgAtrib(){
       <th><input type="checkbox" id="cbAll" onclick="document.querySelectorAll('.atcb').forEach(c=>c.checked=this.checked)"></th>
       <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th>
     </tr></thead><tbody>${data.map(p=>`<tr>
-      <td><input type="checkbox" class="atcb" value="${p.id}"></td>
+      <td><input type="checkbox" class="atcb" value="${p.id}" data-num="${p.numero}"></td>
       <td style="font-weight:500">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${fmtData(p.data_abertura)}</td>
     </tr>`).join('')}</tbody></table></div>`:'<div class="empty-state"><i class="ti ti-checks"></i>Nenhum processo pendente.</div>'}
   </div>`);}
@@ -1015,6 +1015,17 @@ async function execAtrib(){
   let ids=[];
   if(modo==='manual'){ids=Array.from(document.querySelectorAll('.atcb:checked')).map(c=>c.value);if(!ids.length){alert('Selecione ao menos um processo.');return;}}
   else{const q=parseInt(document.getElementById('atQ').value)||10;ids=Array.from(document.querySelectorAll('.atcb')).slice(0,q).map(c=>c.value);if(!ids.length){alert('Nenhum processo disponível.');return;}}
+  // Detecta vinculados pendentes fora da seleção
+  const cbAll=Array.from(document.querySelectorAll('.atcb'));
+  const idSet=new Set(ids);
+  const radSel=new Set(ids.map(id=>{const cb=cbAll.find(c=>c.value===id);const n=(cb?.getAttribute('data-num')||'').split(/\s/)[0];return n.replace(/\d{2}$/,'');}).filter(r=>r.length>5));
+  const extras=cbAll.filter(cb=>!idSet.has(cb.value)&&(()=>{const n=(cb.getAttribute('data-num')||'').split(/\s/)[0];return radSel.has(n.replace(/\d{2}$/,''));})());
+  if(extras.length){
+    const nomes=extras.map(cb=>cb.getAttribute('data-num')).join('\n');
+    if(confirm(`⚠️ Processos vinculados encontrados!\n\nOs processos abaixo têm o mesmo radical dos selecionados e ainda estão pendentes:\n\n${nomes}\n\nDeseja incluí-los no mesmo analista?`)){
+      extras.forEach(cb=>ids.push(cb.value));
+    }
+  }
   const btn=document.getElementById('bAtrib');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Atribuindo...';
   const{error}=await sb.from('processos').update({analista_id:anaId,situacao:'em_julgamento',data_atribuicao:hoje}).in('id',ids);
   btn.disabled=false;btn.innerHTML='<i class="ti ti-list-check"></i> Atribuir Processos';
