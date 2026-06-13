@@ -866,8 +866,89 @@ function verP(id){
   ${isAdmin()?`<button class="btn-sec" style="margin-right:auto" data-id="${p.id}" onclick="closeModal();editP(this.dataset.id)"><i class="ti ti-edit"></i> Editar</button>`:''}
   <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirHistorico(this.dataset.id,this.dataset.num)"><i class="ti ti-history"></i> Histórico</button>
   <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirChat(this.dataset.id,this.dataset.num)"><i class="ti ti-message-circle"></i> Mensagens</button>
+  <button class="btn-sec" data-id="${p.id}" onclick="exportarPdfProcesso(this.dataset.id)" title="Gerar PDF do processo"><i class="ti ti-file-download"></i> PDF</button>
   <button class="btn-primary" style="width:auto" onclick="closeModal()">Fechar</button>
 </div>`);}
+
+async function exportarPdfProcesso(id){
+  const p=_allProc.find(x=>x.id===id);
+  if(!p)return;
+  const anaNome=analistas.find(x=>x.id===p.analista_id)?.name||'—';
+  const res=await sb.from('andamentos').select('*').eq('processo_id',id).order('created_at');
+  const ands=res.data||[];
+  const tipoLabel={andamento:'Andamento',ato:'Ato',pedido:'Pedido'};
+  const sitLabel={pendente:'Pendente',em_julgamento:'Em Julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguardando Correção',julgado:'Julgado'};
+  const d=diasAtr(p);
+  const andHtml=ands.length?ands.map(a=>`
+    <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;background:${a.tipo==='pedido'?'#fff8f0':'#f8f9fa'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:${a.tipo==='pedido'?'#b94a00':a.tipo==='ato'?'#185FA5':'#444'}">${tipoLabel[a.tipo]||a.tipo}</span>
+        <span style="font-size:11px;color:#777">${new Date(a.created_at).toLocaleString('pt-BR')} — ${escHist(a.autor_nome||'—')}</span>
+      </div>
+      <div style="white-space:pre-wrap;line-height:1.5">${escHist(a.texto)}</div>
+      ${a.resposta?`<div style="margin-top:8px;padding:8px 10px;background:#e8f5e9;border-radius:4px;font-size:12px"><strong>Resposta:</strong> ${escHist(a.resposta)}${a.respondido_por?` <span style="color:#666">(${escHist(a.respondido_por)})</span>`:''}</div>`:''}
+    </div>`).join(''):'<p style="color:#999;font-style:italic">Nenhum registro no histórico.</p>';
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Processo ${p.numero} — PROCON Maceió</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a2e;padding:28px 32px}
+.hdr{text-align:center;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #185FA5}
+.hdr h1{font-size:18px;color:#185FA5;margin-bottom:2px}
+.hdr p{font-size:12px;color:#666;margin-top:3px}
+.sec{margin-bottom:20px}
+.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#185FA5;border-bottom:1px solid #ddd;padding-bottom:4px;margin-bottom:10px}
+table.dtbl{width:100%;border-collapse:collapse}
+table.dtbl td{padding:5px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+table.dtbl td:first-child{width:150px;color:#666;font-size:12px}
+table.dtbl td:last-child{font-weight:500}
+.atr-badge{display:inline-block;background:#FFF3CD;color:#856404;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600;margin-left:6px}
+@media print{body{padding:10px 14px}.no-print{display:none}}
+</style></head><body>
+<div class="hdr">
+  <h1>PROCON Maceió</h1>
+  <p>Sistema de Gestão de Processos Administrativos</p>
+  <p>Emitido em ${new Date().toLocaleString('pt-BR')}</p>
+</div>
+<div class="sec">
+  <div class="sec-title">Dados do Processo</div>
+  <table class="dtbl">
+    <tr><td>Nº do Processo</td><td><strong>${escHist(p.numero)}</strong></td></tr>
+    <tr><td>Fornecedor</td><td>${escHist(p.fornecedor)}</td></tr>
+    <tr><td>Tema</td><td>${escHist(p.tema||'—')}</td></tr>
+    <tr><td>Data de Abertura</td><td>${fmtData(p.data_abertura)||'—'}</td></tr>
+    <tr><td>Analista</td><td>${escHist(anaNome)}</td></tr>
+    <tr><td>Situação</td><td>${escHist(sitLabel[p.situacao]||p.situacao)}${d?`<span class="atr-badge">⚠ Atrasado (${d}d)</span>`:''}</td></tr>
+    ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${fmtData(p.data_atribuicao)}</td></tr>`:''}
+    ${p.data_julgamento?`<tr><td>Data Julgamento</td><td>${fmtData(p.data_julgamento)}</td></tr>`:''}
+    ${p.data_correcao?`<tr><td>Data Aprovação</td><td>${fmtData(p.data_correcao)}</td></tr>`:''}
+    ${(p.situacao==='multa'||p.resultado_analista==='multa')?`<tr><td>Valor Multa</td><td style="color:#c00;font-weight:700">${fmtM(p.valor)}</td></tr>`:''}
+    ${(p.situacao==='arquivado'||p.resultado_analista==='arquivado')?`<tr><td>Motivo Arquivamento</td><td>${escHist(p.motivo_arquivamento||'—')}</td></tr>`:''}
+    ${p.obs_correcao?`<tr><td>Obs. Correção</td><td>${escHist(p.obs_correcao)}</td></tr>`:''}
+  </table>
+</div>
+${(p.anexo_decisao_url||p.anexo_multa_url||p.anexo_dosimetria_url)?`<div class="sec">
+  <div class="sec-title">Documentos Anexados</div>
+  <table class="dtbl">
+    ${(p.anexo_decisao_url||p.anexo_multa_url)?`<tr><td>Decisão</td><td><a href="${p.anexo_decisao_url||p.anexo_multa_url}">${escHist(p.anexo_decisao_nome||p.anexo_multa_nome||'Decisão')}</a></td></tr>`:''}
+    ${p.anexo_dosimetria_url?`<tr><td>Dosimetria</td><td><a href="${p.anexo_dosimetria_url}">${escHist(p.anexo_dosimetria_nome||'Dosimetria')}</a></td></tr>`:''}
+  </table>
+</div>`:''}
+<div class="sec">
+  <div class="sec-title">Histórico de Andamentos (${ands.length})</div>
+  ${andHtml}
+</div>
+<div class="no-print" style="text-align:center;margin-top:24px">
+  <button onclick="window.print()" style="padding:8px 22px;background:#185FA5;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir / Salvar PDF</button>
+</div>
+</body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Permita pop-ups para gerar o PDF.');return;}
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(),700);
+}
 
 function editP(id){
   const p=_allProc.find(x=>x.id===id);
