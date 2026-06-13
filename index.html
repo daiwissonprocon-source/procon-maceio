@@ -279,6 +279,24 @@ async function boot(){
     </div>`;
     return;
   }
+  // Tenta restaurar sessão salva (sem precisar fazer login novamente)
+  try{
+    const s=JSON.parse(localStorage.getItem('procon_sess')||'null');
+    if(s){
+      if(s.role==='admin'){
+        currentUser={...ADMIN};
+        document.getElementById('globalLoader').style.display='none';
+        enterApp();return;
+      }else{
+        const found=analistas.find(a=>a.id===s.id&&a.ativo);
+        if(found){
+          currentUser={...found,role:'analista'};
+          document.getElementById('globalLoader').style.display='none';
+          enterApp();return;
+        }
+      }
+    }
+  }catch(e){}
   document.getElementById('globalLoader').style.display='none';
   document.getElementById('loginScreen').classList.remove('hidden');
 }
@@ -299,6 +317,7 @@ async function doLogin(){
 }
 
 function enterApp(){
+  const{pass:_,...sess}=currentUser; localStorage.setItem('procon_sess',JSON.stringify(sess));
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('appShell').style.display='flex';
   document.getElementById('topUserName').textContent=currentUser.name;
@@ -312,6 +331,7 @@ function enterApp(){
 }
 
 function doLogout(){
+  localStorage.removeItem('procon_sess');
   currentUser=null;
   document.getElementById('appShell').style.display='none';
   document.getElementById('loginScreen').classList.remove('hidden');
