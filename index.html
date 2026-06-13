@@ -14,6 +14,11 @@
   #globalLoader{position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes toastOut{to{transform:translateX(110%);opacity:0}}
+  #toastContainer{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none}
+  .toast{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;font-size:13px;max-width:320px;box-shadow:0 4px 16px rgba(0,0,0,.35);animation:toastIn .25s ease forwards;pointer-events:all;color:#fff;cursor:default}
+  .toast.out{animation:toastOut .3s ease forwards}
   .nav-badge{display:inline-flex;align-items:center;justify-content:center;background:#A32D2D;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 5px;margin-left:auto;animation:pulse-badge 2s infinite}
   @keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:.65}}
   .badge-correcao{background:#7B2D8B;color:#fff}
@@ -331,14 +336,57 @@ function enterApp(){
   atualizarBadgeAtraso();
   setInterval(()=>atualizarBadgeAtraso(),60000);
   if(currentUser.role==='admin') atualizarBadgeCorrecao();
+  initRealtime();
 }
 
 function doLogout(){
   localStorage.removeItem('procon_sess');
+  if(_rtChannel){sb.removeChannel(_rtChannel);_rtChannel=null;}
   currentUser=null;
   document.getElementById('appShell').style.display='none';
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('loginPass').value='';
+}
+
+function showToast(msg,type='info',duration=6000){
+  let c=document.getElementById('toastContainer');
+  if(!c){c=document.createElement('div');c.id='toastContainer';document.body.appendChild(c);}
+  const colors={info:'#185FA5',success:'#1A7A4A',warn:'#B94A00',error:'#A32D2D'};
+  const icons={info:'ti-bell',success:'ti-circle-check',warn:'ti-alert-triangle',error:'ti-alert-circle'};
+  const t=document.createElement('div');
+  t.className='toast';
+  t.style.background=colors[type]||colors.info;
+  t.innerHTML=`<i class="ti ${icons[type]||icons.info}" style="flex-shrink:0;font-size:16px;margin-top:1px"></i><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),320);},duration);
+}
+
+let _rtChannel=null;
+function initRealtime(){
+  if(_rtChannel)return;
+  _rtChannel=sb.channel('rt-processos')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'processos'},payload=>{
+      const novo=payload.new, velho=payload.old;
+      // Atualiza _allProc em memória
+      const idx=_allProc.findIndex(x=>x.id===novo.id);
+      if(idx>=0)_allProc[idx]=novo; else _allProc.push(novo);
+      if(currentUser?.role==='analista'){
+        // Novo processo atribuído a este analista
+        if(novo.analista_id===currentUser.id&&velho.analista_id!==currentUser.id){
+          showToast(`Novo processo atribuído: <strong>${novo.numero}</strong>`, 'info');
+          if(!_fila.find(x=>x.id===novo.id))_fila.push(novo);
+          atualizarBadgeAtraso();
+        }
+      } else if(currentUser?.role==='admin'){
+        // Analista enviou julgamento para revisão
+        if(novo.situacao==='aguardando_correcao'&&velho.situacao==='em_julgamento'){
+          const nome=analistas.find(a=>a.id===novo.analista_id)?.name||'Analista';
+          showToast(`${nome} julgou: <strong>${novo.numero}</strong>`, 'success');
+          atualizarBadgeCorrecao();
+        }
+      }
+    })
+    .subscribe();
 }
 
 function isAdmin(){return currentUser?.role==='admin';}
