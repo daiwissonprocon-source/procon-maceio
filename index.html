@@ -321,6 +321,66 @@ function doLogout(){
 function isAdmin(){return currentUser?.role==='admin';}
 function fmtM(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});}
 function fmtData(d){if(!d)return '';const s=String(d).slice(0,10);const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:d;}
+
+/* ═══════════════════════════════════════════════════
+   ORDENAÇÃO DE TABELAS (clique no cabeçalho)
+   1º clique = crescente, 2º = decrescente. Vale para todas as tabelas.
+═══════════════════════════════════════════════════ */
+// Converte o texto de uma célula em valor comparável. t: 0=número/data, 1=texto, 2=vazio
+function _sortVal(text){
+  text=(text==null?'':String(text)).trim();
+  if(text===''||text==='—') return {t:2,v:''};
+  const mC=text.match(/R\$\s*([\d.]+,\d{2})/);            // moeda R$ 1.234,56
+  if(mC) return {t:0,v:parseFloat(mC[1].replace(/\./g,'').replace(',','.'))};
+  const mD=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // data DD/MM/AAAA
+  if(mD) return {t:0,v:parseInt(mD[3]+mD[2].padStart(2,'0')+mD[1].padStart(2,'0'),10)};
+  const n=text.replace(/\./g,'').replace(',','.');        // número
+  if(/^-?\d+(\.\d+)?$/.test(n)) return {t:0,v:parseFloat(n)};
+  return {t:1,v:text.toLowerCase()};
+}
+
+// Estilo de cursor/indicador para cabeçalhos ordenáveis
+(function(){
+  const st=document.createElement('style');
+  st.textContent='table thead th{cursor:pointer;user-select:none}table thead th:hover{background:var(--bg-tertiary)}.sort-ind{font-size:10px;opacity:.7;margin-left:3px}';
+  document.head.appendChild(st);
+})();
+
+// Listener único: qualquer clique em <th> de uma tabela com <thead> ordena as linhas
+document.addEventListener('click',function(ev){
+  const th=ev.target.closest('th');
+  if(!th)return;
+  const thead=th.closest('thead'); if(!thead)return;
+  const table=th.closest('table'); if(!table)return;
+  const tbody=table.querySelector('tbody'); if(!tbody)return;
+  const ths=Array.from(th.parentElement.children);
+  const col=ths.indexOf(th); if(col<0)return;
+  const label=th.textContent.replace(/[▲▼]/g,'').trim().toLowerCase();
+  if(label===''||label==='ações'||label==='acoes')return; // não ordena ações/colunas vazias
+  const rows=Array.from(tbody.querySelectorAll(':scope > tr'));
+  if(rows.length<2)return;
+  const prev=table.getAttribute('data-sort-col');
+  const dir=(prev===String(col)&&table.getAttribute('data-sort-dir')==='asc')?'desc':'asc';
+  table.setAttribute('data-sort-col',col);
+  table.setAttribute('data-sort-dir',dir);
+  const mul=dir==='asc'?1:-1;
+  rows.sort(function(ra,rb){
+    const ta=(ra.children[col]||{}).textContent||'', tb=(rb.children[col]||{}).textContent||'';
+    const a=_sortVal(ta), b=_sortVal(tb);
+    if(a.t===2&&b.t===2)return 0;
+    if(a.t===2)return 1;            // vazio sempre por último
+    if(b.t===2)return -1;
+    let cmp;
+    if(a.t===0&&b.t===0) cmp=a.v<b.v?-1:(a.v>b.v?1:0);
+    else cmp=ta.trim().toLowerCase().localeCompare(tb.trim().toLowerCase(),'pt');
+    return cmp*mul;
+  });
+  rows.forEach(function(r){tbody.appendChild(r);});
+  // indicador ▲/▼ no cabeçalho
+  ths.forEach(function(h){const s=h.querySelector('.sort-ind');if(s)s.remove();});
+  const ind=document.createElement('span');ind.className='sort-ind';ind.textContent=dir==='asc'?'▲':'▼';
+  th.appendChild(ind);
+});
 function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_atribuicao)return false;return(Date.now()-new Date(p.data_atribuicao))/86400000>3;}
 function getANome(id){if(!id)return '<span style="color:var(--text-tertiary)">—</span>';const a=analistas.find(x=>x.id===id);return a?a.name:'—';}
 function getBadge(s){const c={pendente:'badge-pending',em_julgamento:'badge-inprogress',multa:'badge-multa',arquivado:'badge-arquivado',aguardando_correcao:'badge-correcao',julgado:'badge-julgado'};const l={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguard. Correção',julgado:'Julgado'};return`<span class="badge ${c[s]||''}">${l[s]||s}</span>`;}
