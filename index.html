@@ -75,6 +75,7 @@
   .badge-multa{background:var(--red-light);color:var(--red)}
   .badge-arquivado{background:var(--green-light);color:var(--green)}
   .badge-atrasado{background:#FAECE7;color:#993C1D}
+  .badge-recurso{background:#EDE9FE;color:#5B21B6;font-weight:700}
   .btn-sec{background:var(--bg-secondary);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text-primary)}
   .btn-sec:hover{background:var(--bg-tertiary)}
   .btn-danger{background:var(--red-light);border:1px solid var(--red-mid);color:var(--red);border-radius:var(--radius-md);padding:6px 12px;cursor:pointer;font-size:12px}
@@ -610,6 +611,7 @@ async function pgDash(){
         emJ=ps.filter(p=>p.situacao==='em_julgamento').length,
         mul=ps.filter(p=>p.situacao==='multa').length,
         arq=ps.filter(p=>p.situacao==='arquivado').length,
+        rec=ps.filter(p=>p.em_recurso).length,
         totM=ps.filter(p=>p.situacao==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0),
         atr=ps.filter(p=>isAtr(p));
 
@@ -683,6 +685,11 @@ async function pgDash(){
       <div class="label"><i class="ti ti-receipt" style="font-size:13px"></i> Multas</div>
       <div class="value v-red">${mul}</div>
       <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${tot?Math.round(mul/tot*100):0}% do total</div>
+    </div>
+    <div class="metric-card" style="border-top:3px solid #5B21B6">
+      <div class="label"><i class="ti ti-rotate-clockwise" style="font-size:13px"></i> Em Recurso</div>
+      <div class="value" style="color:#5B21B6">${rec}</div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${rec?'Aguardando re-julgamento':'Nenhum'}</div>
     </div>
     <div class="metric-card" style="border-top:3px solid var(--green)">
       <div class="label"><i class="ti ti-archive" style="font-size:13px"></i> Arquivados</div>
@@ -831,7 +838,7 @@ function renderProcPage(ps){
     </div>
     ${isAdmin()?`<div class="filter-bar">
       <input type="text" id="fB" placeholder="Buscar fornecedor, nº ou tema..." style="flex:1;min-width:180px" oninput="cliFilter()">
-      <select id="fS" onchange="cliFilter()"><option value="">Todas situações</option><option value="pendente">Pendente</option><option value="em_julgamento">Em julgamento</option><option value="multa">Multa</option><option value="arquivado">Arquivado</option></select>
+      <select id="fS" onchange="cliFilter()"><option value="">Todas situações</option><option value="pendente">Pendente</option><option value="em_julgamento">Em julgamento</option><option value="multa">Multa</option><option value="arquivado">Arquivado</option><option value="em_recurso">↺ Em Recurso</option></select>
       <select id="fA" onchange="cliFilter()"><option value="">Todos analistas</option>${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
       <div style="width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:2px">
         <span style="font-size:12px;color:var(--text-tertiary);white-space:nowrap">Período:</span>
@@ -858,7 +865,7 @@ function buildTbl(list){
     <td style="font-size:12px">${p.tema}</td>
     <td style="font-size:12px">${fmtData(p.data_abertura)}</td>
     <td style="font-size:12px">${getANome(p.analista_id)}</td>
-    <td>${getBadge(p.situacao)}${at?' '+badgeAtr(p):''}</td>
+    <td>${getBadge(p.situacao)}${p.em_recurso?' <span class="badge badge-recurso">↺ Recurso</span>':''}${at?' '+badgeAtr(p):''}</td>
     ${adm?`<td style="font-size:12px">${p.situacao==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,35):p.situacao==='aguardando_correcao'?'<span style="color:#7B2D8B;font-weight:500">Aguard. revisão</span>':p.situacao==='julgado'?'<span style="color:#0C6B3A;font-weight:500">✓ Aprovado</span>':'—'}</td>`:''}
     <td>
       <button class="btn-sm" data-id="${p.id}" onclick="verP(this.dataset.id)" title="Visualizar processo"><i class="ti ti-eye"></i></button>
@@ -896,7 +903,7 @@ function cliFilter(){
   const ate=(document.getElementById('fAte')||{value:''}).value;
   _procFiltered=_allProc.filter(p=>{
     if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!(p.tema||'').toLowerCase().includes(b))return false;
-    if(s&&p.situacao!==s)return false;
+    if(s==='em_recurso'){if(!p.em_recurso)return false;}else if(s&&p.situacao!==s)return false;
     if(a&&p.analista_id!==a)return false;
     if(campo&&(de||ate)){
       const d=(p[campo]||'').slice(0,10);
@@ -952,7 +959,9 @@ function verP(id){
     <tr><td>Tema</td><td>${p.tema}</td></tr>
     <tr><td>Data Abertura</td><td>${fmtData(p.data_abertura)}</td></tr>
     <tr><td>Analista</td><td>${getANome(p.analista_id)}</td></tr>
-    <tr><td>Situação</td><td>${getBadge(p.situacao)}${badgeAtr(p)}</td></tr>
+    <tr><td>Situação</td><td>${getBadge(p.situacao)}${p.em_recurso?' <span class="badge badge-recurso">↺ Recurso</span>':''}${badgeAtr(p)}</td></tr>
+    ${p.em_recurso&&p.resultado_original?`<tr><td>Resultado Original</td><td style="color:#5B21B6;font-weight:500"><i class="ti ti-history"></i> ${escHist(p.resultado_original)}</td></tr>`:''}
+    ${p.em_recurso&&p.data_recurso?`<tr><td>Data do Recurso</td><td>${fmtData(p.data_recurso)}</td></tr>`:''}
     ${p.situacao==='multa'||p.resultado_analista==='multa'?`<tr><td>Valor Multa</td><td style="color:var(--red);font-weight:600">${fmtM(p.valor)}</td></tr>`:''}
     ${p.situacao==='arquivado'||p.resultado_analista==='arquivado'?`<tr><td>Motivação Arquiv.</td><td>${p.motivo_arquivamento||''}</td></tr>`:''}
     ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${fmtData(p.data_atribuicao)}</td></tr>`:''}
@@ -965,11 +974,29 @@ function verP(id){
 </div>
 <div class="modal-footer">
   ${isAdmin()?`<button class="btn-sec" style="margin-right:auto" data-id="${p.id}" onclick="closeModal();editP(this.dataset.id)"><i class="ti ti-edit"></i> Editar</button>`:''}
+  ${isAdmin()&&['multa','arquivado','julgado'].includes(p.situacao)&&!p.em_recurso?`<button class="btn-sec" style="color:#5B21B6;border-color:#C4B5FD" data-id="${p.id}" onclick="registrarRecurso(this.dataset.id)"><i class="ti ti-rotate-clockwise"></i> Recurso</button>`:''}
   <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirHistorico(this.dataset.id,this.dataset.num)"><i class="ti ti-history"></i> Histórico</button>
   <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirChat(this.dataset.id,this.dataset.num)"><i class="ti ti-message-circle"></i> Mensagens</button>
   <button class="btn-sec" data-id="${p.id}" onclick="exportarPdfProcesso(this.dataset.id)" title="Gerar PDF do processo"><i class="ti ti-file-download"></i> PDF</button>
   <button class="btn-primary" style="width:auto" onclick="closeModal()">Fechar</button>
 </div>`);}
+
+async function registrarRecurso(id){
+  const p=_allProc.find(x=>x.id===id);
+  if(!p)return;
+  const resOrig=p.situacao==='multa'?`Multa: ${fmtM(p.valor)}`:p.situacao==='arquivado'?`Arquivado: ${(p.motivo_arquivamento||'—').slice(0,120)}`:p.situacao==='julgado'?'Julgado (aprovado)':p.situacao;
+  if(!confirm(`Registrar recurso para o processo ${p.numero}?\n\nResultado original será preservado:\n${resOrig}\n\nO processo voltará para a fila de atribuição.`))return;
+  const hoje=new Date().toISOString().slice(0,10);
+  const upd={em_recurso:true,resultado_original:resOrig,data_recurso:hoje,situacao:'pendente',analista_id:null,data_atribuicao:null,data_julgamento:null,data_correcao:null,obs_correcao:null,resultado_analista:null,valor:null,motivo_arquivamento:null};
+  const{error}=await sb.from('processos').update(upd).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:`Recurso interposto. Resultado original: ${resOrig}`,autor_nome:currentUser.name,autor_role:currentUser.role});
+  const idx=_allProc.findIndex(x=>x.id===id);
+  if(idx>=0)_allProc[idx]={..._allProc[idx],...upd};
+  closeModal();
+  showToast(`Recurso registrado para ${p.numero}. Processo voltou para a fila.`,'warn',7000);
+  pgProc();
+}
 
 async function exportarPdfProcesso(id){
   const p=_allProc.find(x=>x.id===id);
@@ -1019,7 +1046,9 @@ table.dtbl td:last-child{font-weight:500}
     <tr><td>Tema</td><td>${escHist(p.tema||'—')}</td></tr>
     <tr><td>Data de Abertura</td><td>${fmtData(p.data_abertura)||'—'}</td></tr>
     <tr><td>Analista</td><td>${escHist(anaNome)}</td></tr>
-    <tr><td>Situação</td><td>${escHist(sitLabel[p.situacao]||p.situacao)}${d?`<span class="atr-badge">⚠ Atrasado (${d}d)</span>`:''}</td></tr>
+    <tr><td>Situação</td><td>${escHist(sitLabel[p.situacao]||p.situacao)}${p.em_recurso?' <strong style="color:#5B21B6">[↺ Em Recurso]</strong>':''}${d?`<span class="atr-badge">⚠ Atrasado (${d}d)</span>`:''}</td></tr>
+    ${p.em_recurso&&p.resultado_original?`<tr><td>Resultado Original</td><td style="color:#5B21B6">${escHist(p.resultado_original)}</td></tr>`:''}
+    ${p.em_recurso&&p.data_recurso?`<tr><td>Data do Recurso</td><td>${fmtData(p.data_recurso)}</td></tr>`:''}
     ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${fmtData(p.data_atribuicao)}</td></tr>`:''}
     ${p.data_julgamento?`<tr><td>Data Julgamento</td><td>${fmtData(p.data_julgamento)}</td></tr>`:''}
     ${p.data_correcao?`<tr><td>Data Aprovação</td><td>${fmtData(p.data_correcao)}</td></tr>`:''}
@@ -1220,7 +1249,7 @@ async function pgAtrib(){
       <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th>
     </tr></thead><tbody>${data.map(p=>`<tr>
       <td><input type="checkbox" class="atcb" value="${p.id}" data-num="${p.numero}"></td>
-      <td style="font-weight:500">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${fmtData(p.data_abertura)}</td>
+      <td style="font-weight:500">${p.numero}${p.em_recurso?' <span class="badge badge-recurso" style="font-size:10px">↺ Recurso</span>':''}</td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${fmtData(p.data_abertura)}</td>
     </tr>`).join('')}</tbody></table></div>`:'<div class="empty-state"><i class="ti ti-checks"></i>Nenhum processo pendente.</div>'}
   </div>`);}
 
