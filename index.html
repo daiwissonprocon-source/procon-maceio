@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROCON Maceió — Processos Administrativos</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<style>
+  :root{--bg-primary:#fff;--bg-secondary:#f8f9fa;--bg-tertiary:#f1f3f5;--text-primary:#212529;--text-secondary:#6c757d;--text-tertiary:#adb5bd;--border:#dee2e6;--border-strong:#ced4da;--blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#85B7EB;--amber:#BA7517;--amber-light:#FAEEDA;--green:#3B6D11;--green-light:#EAF3DE;--red:#A32D2D;--red-light:#FCEBEB;--red-mid:#F09595;--radius-md:8px;--radius-lg:12px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:var(--text-primary);background:var(--bg-tertiary)}
+  .hidden{display:none!important}
+  #globalLoader{position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .nav-badge{display:inline-flex;align-items:center;justify-content:center;background:#A32D2D;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 5px;margin-left:auto;animation:pulse-badge 2s infinite}
+  @keyframes pulse-badge{0%,100%{opacity:1}50%{opacity:.65}}
+  .badge-correcao{background:#7B2D8B;color:#fff}
+  .badge-julgado{background:#0C6B3A;color:#fff}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+  .dot-correcao{background:#7B2D8B}
+  .dot-julgado{background:#0C6B3A}
+  #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0C447C 0%,#185FA5 60%,#378ADD 100%)}
+  .login-box{background:var(--bg-primary);border-radius:var(--radius-lg);padding:2rem 2.5rem;width:360px;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+  .login-logo{text-align:center;margin-bottom:1.5rem}
+  .login-logo .icon{font-size:42px;margin-bottom:8px}
+  .login-logo .brand{font-size:20px;font-weight:600;color:var(--blue)}
+  .login-logo .sub{font-size:12px;color:var(--text-secondary);margin-top:3px}
+  .form-label{font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:4px;margin-top:14px}
+  .form-input{width:100%;padding:9px 12px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:14px;color:var(--text-primary);background:var(--bg-primary)}
+  .form-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.12)}
+  .btn-primary{background:var(--blue);color:#fff;border:none;border-radius:var(--radius-md);padding:10px 18px;cursor:pointer;font-size:14px;font-weight:500;width:100%;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .btn-primary:hover{background:#0C447C}
+  .btn-primary:disabled{background:#aaa;cursor:not-allowed}
+  .hint-box{margin-top:14px;padding:8px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:11px;color:var(--text-secondary);text-align:center;line-height:1.6}
+  .err-msg{color:var(--red);font-size:12px;margin-top:8px;text-align:center}
+  #appShell{display:none;flex-direction:column;min-height:100vh}
+  .topbar{background:var(--blue);color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+  .topbar .brand{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .topbar .user-area{display:flex;align-items:center;gap:10px;font-size:13px}
+  .topbar .user-badge{background:rgba(255,255,255,.15);padding:4px 10px;border-radius:20px;font-size:12px}
+  .btn-logout{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:5px 12px;border-radius:var(--radius-md);cursor:pointer;font-size:12px}
+  .btn-logout:hover{background:rgba(255,255,255,.22)}
+  .layout{display:flex;flex:1}
+  .sidebar{width:200px;background:var(--bg-primary);border-right:1px solid var(--border);padding:14px 0;flex-shrink:0}
+  .nav-section{font-size:10px;color:var(--text-tertiary);padding:10px 16px 3px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;font-size:13px;color:var(--text-secondary);border-left:3px solid transparent;transition:all .12s;user-select:none}
+  .nav-item:hover{background:var(--bg-secondary);color:var(--text-primary)}
+  .nav-item.active{background:var(--blue-light);color:var(--blue);border-left-color:var(--blue);font-weight:500}
+  .nav-item i{font-size:17px}
+  .content{flex:1;padding:20px;overflow:auto}
+  .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+  .metric-card{background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px}
+  .metric-card .label{font-size:12px;color:var(--text-secondary);margin-bottom:5px}
+  .metric-card .value{font-size:24px;font-weight:600}
+  .v-blue{color:var(--blue)}.v-amber{color:var(--amber)}.v-green{color:var(--green)}.v-red{color:var(--red)}
+  .card{background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px}
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .card-title{font-size:14px;font-weight:600}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;padding:9px 10px;color:var(--text-secondary);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:var(--bg-secondary)}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-pending{background:var(--amber-light);color:var(--amber)}
+  .badge-inprogress{background:var(--blue-light);color:var(--blue)}
+  .badge-multa{background:var(--red-light);color:var(--red)}
+  .badge-arquivado{background:var(--green-light);color:var(--green)}
+  .badge-atrasado{background:#FAECE7;color:#993C1D}
+  .btn-sec{background:var(--bg-secondary);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text-primary)}
+  .btn-sec:hover{background:var(--bg-tertiary)}
+  .btn-danger{background:var(--red-light);border:1px solid var(--red-mid);color:var(--red);border-radius:var(--radius-md);padding:6px 12px;cursor:pointer;font-size:12px}
+  .btn-sm{padding:5px 10px;font-size:12px;border-radius:var(--radius-md);cursor:pointer;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-primary)}
+  .btn-sm:hover{background:var(--bg-tertiary)}
+  .btn-blue-sm{background:var(--blue-light);border:1px solid var(--blue-mid);color:var(--blue);border-radius:var(--radius-md);padding:6px 12px;font-size:12px;cursor:pointer;font-weight:500}
+  .btn-blue-sm:hover{background:#B5D4F4}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-group{display:flex;flex-direction:column;gap:5px}
+  .form-group.full{grid-column:1/-1}
+  .form-group label{font-size:12px;color:var(--text-secondary);font-weight:500}
+  .form-group input,.form-group select,.form-group textarea{padding:8px 11px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--bg-primary);color:var(--text-primary);font-size:13px;font-family:inherit}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+  .form-group textarea{resize:vertical;min-height:80px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:200}
+  .modal{background:var(--bg-primary);border-radius:var(--radius-lg);padding:24px;width:92%;max-width:540px;box-shadow:0 12px 40px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+  .modal h3{font-size:16px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .modal-footer{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+  .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .filter-bar input,.filter-bar select{padding:7px 11px;border:1px solid var(--border-strong);border-radius:var(--radius-md);background:var(--bg-primary);color:var(--text-primary);font-size:13px}
+  .upload-zone{border:2px dashed var(--border-strong);border-radius:var(--radius-lg);padding:30px;text-align:center;cursor:pointer;color:var(--text-secondary);transition:all .15s}
+  .upload-zone:hover{background:var(--bg-secondary);border-color:var(--blue);color:var(--blue)}
+  .alert{padding:11px 15px;border-radius:var(--radius-md);font-size:13px;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+  .alert-info{background:var(--blue-light);color:#0C447C;border:1px solid var(--blue-mid)}
+  .alert-warn{background:var(--amber-light);color:#6B3D00;border:1px solid #FAC775}
+  .alert-success{background:var(--green-light);color:#1a3d08;border:1px solid #C0DD97}
+  .alert-error{background:var(--red-light);color:var(--red);border:1px solid var(--red-mid)}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--text-secondary)}
+  .empty-state i{font-size:40px;margin-bottom:12px;display:block;opacity:.4}
+  .detail-table td:first-child{color:var(--text-secondary);width:38%;font-size:12px;padding:7px 0}
+  .detail-table td:last-child{padding:7px 0;font-size:13px}
+  code{background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:12px;font-family:monospace}
+  .spin-inline{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+  @media(max-width:700px){.sidebar{display:none}.form-grid{grid-template-columns:1fr}.form-group.full{grid-column:1}}
+
+
+  /* ── CHAT ── */
+  .chat-wrap{display:flex;flex-direction:column;height:420px;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--bg-tertiary)}
+  .chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .chat-bubble{max-width:78%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word}
+  .chat-bubble.me{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+  .chat-bubble.other{align-self:flex-start;background:var(--bg-primary);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text-primary)}
+  .chat-bubble .chat-meta{font-size:10px;opacity:.7;margin-top:4px;display:flex;align-items:center;gap:4px}
+  .chat-bubble.me .chat-meta{justify-content:flex-end}
+  .chat-bubble .chat-file{display:flex;align-items:center;gap:6px;margin-top:6px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.15);font-size:12px;text-decoration:none;color:inherit}
+  .chat-bubble.other .chat-file{background:var(--bg-secondary)}
+  .chat-bubble .chat-file i{font-size:18px;flex-shrink:0}
+  .chat-input-bar{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--border);background:var(--bg-primary)}
+  .chat-input-row{display:flex;align-items:flex-end;gap:6px;padding:8px 10px}
+  .chat-input-row textarea{flex:1;resize:none;border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:8px 10px;font-size:13px;font-family:inherit;background:var(--bg-primary);color:var(--text-primary);min-height:38px;max-height:90px;line-height:1.4}
+  .chat-input-row textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(24,95,165,.1)}
+  .chat-attach-preview{padding:6px 10px 0;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)}
+  .chat-attach-preview i{font-size:16px;color:var(--blue)}
+  .btn-chat-send{background:var(--blue);color:#fff;border:none;border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;font-size:13px;height:38px;display:flex;align-items:center;gap:5px;flex-shrink:0}
+  .btn-chat-send:hover{background:#0C447C}
+  .btn-chat-send:disabled{background:#aaa;cursor:not-allowed}
+  .btn-chat-attach{background:var(--bg-secondary);border:1px solid var(--border-strong);color:var(--text-secondary);border-radius:var(--radius-md);padding:8px 10px;cursor:pointer;font-size:16px;height:38px;display:flex;align-items:center;flex-shrink:0}
+  .btn-chat-attach:hover{background:var(--bg-tertiary);color:var(--blue)}
+  .chat-day-divider{text-align:center;font-size:11px;color:var(--text-tertiary);margin:4px 0;position:relative}
+  .chat-day-divider::before,.chat-day-divider::after{content:'';position:absolute;top:50%;width:30%;height:1px;background:var(--border)}
+  .chat-day-divider::before{left:0}.chat-day-divider::after{right:0}
+  .nav-badge-msg{display:inline-flex;align-items:center;justify-content:center;background:#E05C00;color:#fff;font-size:10px;font-weight:700;min-width:17px;height:17px;border-radius:9px;padding:0 4px;margin-left:auto}
+  body.dark .chat-bubble.other{background:#252830;border-color:#3A4055}
+  body.dark .chat-input-bar{background:#1E2128;border-top-color:#2E3340}
+  body.dark .chat-input-row textarea{background:#252830;border-color:#3A4055;color:#E8EAF0}
+  body.dark .chat-wrap{background:#16181D;border-color:#2E3340}
+  body.dark .btn-chat-attach{background:#252830;border-color:#3A4055}
+
+  /* ── DARK MODE ── */
+  body.dark{
+    --bg-primary:#1E2128;--bg-secondary:#252830;--bg-tertiary:#16181D;
+    --text-primary:#E8EAF0;--text-secondary:#9BA3B4;--text-tertiary:#5C6478;
+    --border:#2E3340;--border-strong:#3A4055;
+    --blue-light:#1A2E45;--blue-mid:#1E3D5C;
+    --amber-light:#2E2210;--green-light:#162410;
+    --red-light:#2E1010;--red-mid:#5C2020;
+  }
+  body.dark .topbar{background:#0C1929}
+  body.dark .sidebar{background:#1E2128;border-right-color:#2E3340}
+  body.dark .login-box{background:#1E2128;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+  body.dark .modal{background:#1E2128}
+  body.dark .card{background:#1E2128;border-color:#2E3340}
+  body.dark .metric-card{background:#1E2128;border-color:#2E3340}
+  body.dark th{background:#252830;color:#9BA3B4}
+  body.dark tbody tr:hover td{background:#252830}
+  body.dark .form-group input,body.dark .form-group select,body.dark .form-group textarea{background:#252830;border-color:#3A4055;color:#E8EAF0}
+  body.dark .btn-sec{background:#252830;border-color:#3A4055;color:#E8EAF0}
+  body.dark .btn-sec:hover{background:#2E3340}
+  body.dark .btn-sm{background:#252830;border-color:#3A4055;color:#E8EAF0}
+  body.dark .btn-sm:hover{background:#2E3340}
+  body.dark .filter-bar input,body.dark .filter-bar select{background:#252830;border-color:#3A4055;color:#E8EAF0}
+  body.dark .upload-zone{border-color:#3A4055;color:#9BA3B4}
+  body.dark .upload-zone:hover{background:#252830}
+  body.dark .hint-box{background:#252830}
+  body.dark .form-input{background:#252830;border-color:#3A4055;color:#E8EAF0}
+  body.dark code{background:#252830;border-color:#3A4055;color:#9BA3B4}
+  body.dark .nav-item:hover{background:#252830}
+  body.dark .nav-item.active{background:#1A2E45;color:#5BA3E8}
+  body.dark td{border-bottom-color:#2E3340}
+  body.dark .modal-footer{border-top-color:#2E3340}
+  body.dark .metric-card[style*="gradient"]{background:linear-gradient(135deg,#2E1010,#1E2128) !important}
+  #darkToggle{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:5px 10px;border-radius:var(--radius-md);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px}
+  #darkToggle:hover{background:rgba(255,255,255,.22)}
+</style>
+</head>
+<body>
+
+<div id="globalLoader">
+  <div class="spinner"></div>
+  <div style="color:var(--text-secondary);font-size:13px">Conectando ao banco de dados...</div>
+</div>
+
+<div id="loginScreen" class="hidden">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="icon">⚖️</div>
+      <div class="brand">PROCON Maceió</div>
+      <div class="sub">Sistema de Gestão de Processos Administrativos</div>
+    </div>
+    <label class="form-label">Usuário</label>
+    <input class="form-input" type="text" id="loginUser" placeholder="login" autocomplete="username">
+    <label class="form-label">Senha</label>
+    <input class="form-input" type="password" id="loginPass" placeholder="senha" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="loginErr" class="err-msg hidden"></div>
+    <button class="btn-primary" id="btnLogin" onclick="doLogin()">
+      <i class="ti ti-login"></i> Entrar
+    </button>
+    <div class="hint-box">
+      <strong>Admin:</strong> admin / procon2024<br>
+      <strong>Analista:</strong> analista1 / ana123
+    </div>
+  </div>
+</div>
+
+<div id="appShell">
+  <div class="topbar">
+    <div class="brand"><i class="ti ti-scale" style="font-size:20px"></i> PROCON Maceió — Processos Administrativos</div>
+    <div class="user-area">
+      <span class="user-badge" id="topUserBadge"></span>
+      <span id="topUserName"></span>
+      <button id="darkToggle" onclick="toggleDark()" title="Alternar modo escuro"><i class="ti ti-moon" id="darkIcon"></i></button>
+      <button class="btn-logout" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </div>
+  <div class="layout">
+    <nav class="sidebar">
+      <div class="nav-section">Geral</div>
+      <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard"><i class="ti ti-dashboard"></i> Dashboard</div>
+      <div class="nav-item" onclick="showPage('processos')" data-page="processos"><i class="ti ti-file-text"></i> Processos</div>
+      <div class="nav-section admin-only">Administração</div>
+      <div class="nav-item admin-only" onclick="showPage('analistas')" data-page="analistas"><i class="ti ti-users"></i> Analistas</div>
+      <div class="nav-item admin-only" onclick="showPage('atribuir')" data-page="atribuir"><i class="ti ti-list-check"></i> Atribuir</div>
+      <div class="nav-item admin-only" onclick="showPage('edicao')" data-page="edicao"><i class="ti ti-pencil"></i> Edição</div>
+      <div class="nav-item admin-only" onclick="showPage('correcao')" data-page="correcao" id="navCorrecao"><i class="ti ti-alert-circle"></i> Correção <span class="nav-badge hidden" id="badgeCorrecao">0</span></div>
+      <div class="nav-item admin-only" onclick="showPage('julgados')" data-page="julgados"><i class="ti ti-circle-check"></i> Julgados</div>
+      <div class="nav-section">Ferramentas</div>
+      <div class="nav-item" onclick="showPage('importar')" data-page="importar"><i class="ti ti-upload"></i> Importar</div>
+      <div class="nav-item" onclick="showPage('relatorios')" data-page="relatorios"><i class="ti ti-report"></i> Relatórios</div>
+      <div class="nav-section analista-only">Julgamento</div>
+      <div class="nav-item analista-only" onclick="showPage('minhafila')" data-page="minhafila"><i class="ti ti-checklist"></i> Minha Fila <span id="badgeChat" class="nav-badge-msg hidden"></span></div>
+    </nav>
+    <main class="content" id="mainContent"></main>
+  </div>
+</div>
+
+<div id="modalContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const SUPABASE_URL='https://xedaoraxnenkdpxrczuz.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZGFvcmF4bmVua2RweHJjenV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNjIyMjEsImV4cCI6MjA5NjgzODIyMX0.vXFjya4tFjH2wVBgkrslCjRp5KZn-QZ9i5zn1dTJAAI';
+let sb=null;
+const ADMIN={id:'admin',name:'Administrador',role:'admin',login:'admin',pass:'procon2024'};
+let currentUser=null,analistas=[];
+
+async function boot(){
+  const timeout=setTimeout(()=>{
+    document.getElementById('globalLoader').innerHTML=`<div style="text-align:center;max-width:360px;padding:20px">
+      <i class="ti ti-wifi-off" style="font-size:40px;display:block;margin-bottom:12px;color:var(--red)"></i>
+      <strong style="color:var(--text-primary)">Tempo limite de conexão atingido.</strong><br><br>
+      <ul style="text-align:left;margin:10px 0 0 20px;font-size:13px;line-height:1.9;color:var(--text-secondary)">
+        <li>Verifique sua conexão com a internet</li>
+        <li>O Supabase pode estar temporariamente fora</li>
+        <li>Confirme que os SQLs foram executados</li>
+      </ul>
+      <button onclick="location.reload()" style="margin-top:14px;padding:9px 20px;background:#185FA5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500">
+        🔄 Tentar novamente
+      </button>
+    </div>`;
+  },12000);
+  try{
+    const{data,error}=await sb.from('analistas').select('*').order('name');
+    clearTimeout(timeout);
+    if(error)throw error;
+    analistas=data||[];
+  }catch(e){
+    clearTimeout(timeout);
+    document.getElementById('globalLoader').innerHTML=`<div style="text-align:center;max-width:360px;padding:20px">
+      <i class="ti ti-alert-circle" style="font-size:40px;display:block;margin-bottom:12px;color:var(--red)"></i>
+      <strong style="color:var(--text-primary)">Erro ao conectar ao banco de dados.</strong><br><br>
+      <div style="font-size:12px;background:var(--bg-secondary);padding:8px 12px;border-radius:6px;text-align:left;margin:8px 0;word-break:break-all;color:var(--text-secondary)">${e.message}</div>
+      Verifique se os SQLs foram executados e o RLS está desabilitado.<br><br>
+      <button onclick="location.reload()" style="margin-top:8px;padding:9px 20px;background:#185FA5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500">
+        🔄 Tentar novamente
+      </button>
+    </div>`;
+    return;
+  }
+  document.getElementById('globalLoader').style.display='none';
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+async function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const btn=document.getElementById('btnLogin');
+  const err=document.getElementById('loginErr');
+  err.classList.add('hidden');
+  if(u===ADMIN.login&&p===ADMIN.pass){currentUser={...ADMIN};enterApp();return;}
+  btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Verificando...';
+  const{data,error}=await sb.from('analistas').select('*').eq('login',u).eq('pass',p).eq('ativo',true).single();
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-login"></i> Entrar';
+  if(error||!data){err.textContent='Usuário ou senha incorretos.';err.classList.remove('hidden');return;}
+  currentUser={...data,role:'analista'};
+  enterApp();
+}
+
+function enterApp(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appShell').style.display='flex';
+  document.getElementById('topUserName').textContent=currentUser.name;
+  document.getElementById('topUserBadge').textContent=currentUser.role==='admin'?'Admin':'Analista';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'':'none');
+  document.querySelectorAll('.analista-only').forEach(el=>el.style.display=currentUser.role==='admin'?'none':'');
+  showPage(currentUser.role==='analista'?'minhafila':'dashboard');
+  atualizarBadgeChat();
+  setInterval(()=>atualizarBadgeChat(),30000);
+  if(currentUser.role==='admin') atualizarBadgeCorrecao();
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('loginPass').value='';
+}
+
+function isAdmin(){return currentUser?.role==='admin';}
+function fmtM(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});}
+function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_atribuicao)return false;return(Date.now()-new Date(p.data_atribuicao))/86400000>3;}
+function getANome(id){if(!id)return '<span style="color:var(--text-tertiary)">—</span>';const a=analistas.find(x=>x.id===id);return a?a.name:'—';}
+function getBadge(s){const c={pendente:'badge-pending',em_julgamento:'badge-inprogress',multa:'badge-multa',arquivado:'badge-arquivado',aguardando_correcao:'badge-correcao',julgado:'badge-julgado'};const l={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguard. Correção',julgado:'Julgado'};return`<span class="badge ${c[s]||''}">${l[s]||s}</span>`;}
+function setC(h){document.getElementById('mainContent').innerHTML=h;}
+function ldg(m){setC(`<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div>${m||'Carregando...'}</div>`);}
+function dbErr(e){setC(`<div class="alert alert-error"><i class="ti ti-alert-circle"></i>Erro: ${e?.message||e}</div>`);}
+
+function showPage(page){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const a=document.querySelector(`[data-page="${page}"]`);if(a)a.classList.add('active');
+  ({dashboard:pgDash,processos:pgProc,analistas:pgAna,atribuir:pgAtrib,edicao:pgEdicao,correcao:pgCorrecao,julgados:pgJulgados,importar:pgImp,relatorios:pgRel,minhafila:pgFila})[page]?.();
+}
+
+/* DASHBOARD */
+let _dashCharts=[];
+function destroyCharts(){_dashCharts.forEach(c=>{try{c.destroy();}catch(e){}});_dashCharts=[];}
+
+async function pgDash(){
+  ldg('Carregando dashboard...');
+  const{data:ps,error}=await sb.from('processos').select('*');
+  if(error){dbErr(error);return;}
+
+  const tot=ps.length,
+        pend=ps.filter(p=>p.situacao==='pendente').length,
+        emJ=ps.filter(p=>p.situacao==='em_julgamento').length,
+        mul=ps.filter(p=>p.situacao==='multa').length,
+        arq=ps.filter(p=>p.situacao==='arquivado').length,
+        totM=ps.filter(p=>p.situacao==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0),
+        atr=ps.filter(p=>isAtr(p));
+
+  // Processos por mês (últimos 12 meses)
+  const mesesMap={};
+  for(let i=11;i>=0;i--){
+    const d=new Date();d.setMonth(d.getMonth()-i);
+    const key=d.toISOString().slice(0,7);
+    mesesMap[key]={multa:0,arquivado:0,pendente:0,em_julgamento:0};
+  }
+  ps.forEach(p=>{
+    const key=(p.data_abertura||'').slice(0,7);
+    if(mesesMap[key]&&p.situacao) mesesMap[key][p.situacao]=(mesesMap[key][p.situacao]||0)+1;
+  });
+  const mesesKeys=Object.keys(mesesMap).sort();
+  const mesesLabels=mesesKeys.map(k=>{const[y,m]=k.split('-');const nm=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];return nm[parseInt(m)-1]+'/'+y.slice(2);});
+
+  // Top fornecedores por multa
+  const fornMap={};
+  ps.filter(p=>p.situacao==='multa').forEach(p=>{
+    const f=p.fornecedor||'Não informado';
+    fornMap[f]=(fornMap[f]||0)+parseFloat(p.valor||0);
+  });
+  const topForn=Object.entries(fornMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  // Taxa de conclusão por analista
+  const anAtivos=analistas.filter(a=>a.ativo);
+
+  let anRows='';
+  anAtivos.forEach(a=>{
+    const m=ps.filter(p=>p.analista_id===a.id);
+    const conc=m.filter(p=>p.situacao==='multa'||p.situacao==='arquivado').length;
+    const taxa=m.length?Math.round(conc/m.length*100):0;
+    const barColor=taxa>=70?'var(--green)':taxa>=40?'var(--amber)':'var(--red)';
+    anRows+=`<tr>
+      <td style="font-weight:500">${a.name}</td>
+      <td>${m.length}</td>
+      <td>${m.filter(p=>p.situacao==='em_julgamento').length}</td>
+      <td>${conc}</td>
+      <td>${fmtM(m.filter(p=>p.situacao==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0))}</td>
+      <td style="min-width:100px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px">
+            <div style="width:${taxa}%;height:100%;background:${barColor};border-radius:3px;transition:width .3s"></div>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:${barColor};min-width:28px">${taxa}%</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  destroyCharts();
+  setC(`
+  <!-- KPI CARDS -->
+  <div class="metric-grid" style="margin-bottom:16px">
+    <div class="metric-card" style="border-top:3px solid var(--blue)">
+      <div class="label"><i class="ti ti-files" style="font-size:13px"></i> Total Processos</div>
+      <div class="value v-blue">${tot}</div>
+    </div>
+    <div class="metric-card" style="border-top:3px solid var(--amber)">
+      <div class="label"><i class="ti ti-clock" style="font-size:13px"></i> Pendentes</div>
+      <div class="value v-amber">${pend}</div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${tot?Math.round(pend/tot*100):0}% do total</div>
+    </div>
+    <div class="metric-card" style="border-top:3px solid #185FA5">
+      <div class="label"><i class="ti ti-gavel" style="font-size:13px"></i> Em Julgamento</div>
+      <div class="value v-blue">${emJ}</div>
+      ${atr.length?`<div style="font-size:11px;color:var(--red);margin-top:4px;font-weight:500"><i class="ti ti-alert-triangle"></i> ${atr.length} atrasado(s)</div>`:'<div style="font-size:11px;color:var(--green);margin-top:4px">Em dia ✓</div>'}
+    </div>
+    <div class="metric-card" style="border-top:3px solid var(--red)">
+      <div class="label"><i class="ti ti-receipt" style="font-size:13px"></i> Multas</div>
+      <div class="value v-red">${mul}</div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${tot?Math.round(mul/tot*100):0}% do total</div>
+    </div>
+    <div class="metric-card" style="border-top:3px solid var(--green)">
+      <div class="label"><i class="ti ti-archive" style="font-size:13px"></i> Arquivados</div>
+      <div class="value v-green">${arq}</div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${tot?Math.round(arq/tot*100):0}% do total</div>
+    </div>
+    <div class="metric-card" style="border-top:3px solid #A32D2D;background:linear-gradient(135deg,#fff8f8,#fff)">
+      <div class="label"><i class="ti ti-currency-dollar" style="font-size:13px"></i> Total em Multas</div>
+      <div class="value v-red" style="font-size:18px">${fmtM(totM)}</div>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">Média: ${mul?fmtM(totM/mul):'R$ 0,00'}/multa</div>
+    </div>
+  </div>
+
+  ${atr.length?`<div class="alert alert-warn" style="margin-bottom:16px"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><div><strong>${atr.length} processo(s) em atraso (&gt;3 dias):</strong> ${atr.map(p=>p.numero).join(', ')}</div></div>`:''}
+
+  <!-- CHARTS ROW 1 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+
+    <!-- Donut situação -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><div class="card-title"><i class="ti ti-chart-donut" style="color:var(--blue)"></i> Distribuição por Situação</div></div>
+      <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center">
+        <canvas id="chartDonut"></canvas>
+      </div>
+    </div>
+
+    <!-- Barras por analista -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><div class="card-title"><i class="ti ti-chart-bar" style="color:var(--blue)"></i> Processos por Analista</div></div>
+      <div style="position:relative;height:220px">
+        <canvas id="chartAnalista"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px">
+
+    <!-- Linha processos por mês -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><div class="card-title"><i class="ti ti-chart-line" style="color:var(--blue)"></i> Processos por Mês (últimos 12 meses)</div></div>
+      <div style="position:relative;height:200px">
+        <canvas id="chartMeses"></canvas>
+      </div>
+    </div>
+
+    <!-- Top fornecedores multa -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header"><div class="card-title"><i class="ti ti-building-store" style="color:var(--blue)"></i> Top Multas</div></div>
+      <div style="font-size:12px">
+        ${topForn.length?topForn.map((([f,v],i)=>`
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+            <span style="color:var(--text-secondary);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f}">${f.slice(0,22)}${f.length>22?'…':''}</span>
+            <span style="font-weight:600;color:var(--red)">${fmtM(v)}</span>
+          </div>
+          <div style="height:5px;background:var(--border);border-radius:3px">
+            <div style="width:${topForn[0][1]?Math.round(v/topForn[0][1]*100):0}%;height:100%;background:${['#A32D2D','#C0392B','#E74C3C','#EC7063','#F1948A','#F5B7B1'][i]};border-radius:3px"></div>
+          </div>
+        </div>`)).join(''):'<div style="color:var(--text-tertiary);text-align:center;padding:20px">Sem multas registradas</div>'}
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA ANALISTAS -->
+  <div class="card">
+    <div class="card-header"><div class="card-title"><i class="ti ti-users" style="color:var(--blue)"></i> Desempenho por Analista</div></div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Analista</th><th>Atribuídos</th><th>Em julgamento</th><th>Concluídos</th><th>Valor multas</th><th>Taxa conclusão</th></tr></thead>
+      <tbody>${anRows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-secondary)">Nenhum analista cadastrado.</td></tr>'}</tbody></table>
+    </div>
+  </div>`);
+
+  // RENDER CHARTS
+  const co={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:12}}}};
+
+  // Donut
+  const ctxD=document.getElementById('chartDonut')?.getContext('2d');
+  if(ctxD){
+    _dashCharts.push(new Chart(ctxD,{
+      type:'doughnut',
+      data:{
+        labels:['Pendente','Em julgamento','Multa','Arquivado'],
+        datasets:[{data:[pend,emJ,mul,arq],backgroundColor:['#FAEEDA','#E6F1FB','#FCEBEB','#EAF3DE'],borderColor:['#BA7517','#185FA5','#A32D2D','#3B6D11'],borderWidth:2}]
+      },
+      options:{...co,cutout:'65%',plugins:{...co.plugins,
+        tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} (${tot?Math.round(ctx.raw/tot*100):0}%)`}}}}
+    }));
+  }
+
+  // Barras analista
+  const ctxA=document.getElementById('chartAnalista')?.getContext('2d');
+  if(ctxA&&anAtivos.length){
+    const labs=anAtivos.map(a=>a.name.split(' ')[0]);
+    const dPend=anAtivos.map(a=>ps.filter(p=>p.analista_id===a.id&&p.situacao==='pendente').length);
+    const dJulg=anAtivos.map(a=>ps.filter(p=>p.analista_id===a.id&&p.situacao==='em_julgamento').length);
+    const dMult=anAtivos.map(a=>ps.filter(p=>p.analista_id===a.id&&p.situacao==='multa').length);
+    const dArq =anAtivos.map(a=>ps.filter(p=>p.analista_id===a.id&&p.situacao==='arquivado').length);
+    _dashCharts.push(new Chart(ctxA,{
+      type:'bar',
+      data:{labels:labs,datasets:[
+        {label:'Multa',data:dMult,backgroundColor:'#FCEBEB',borderColor:'#A32D2D',borderWidth:1.5},
+        {label:'Arquivado',data:dArq,backgroundColor:'#EAF3DE',borderColor:'#3B6D11',borderWidth:1.5},
+        {label:'Em julgamento',data:dJulg,backgroundColor:'#E6F1FB',borderColor:'#185FA5',borderWidth:1.5},
+      ]},
+      options:{...co,scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}},plugins:{...co.plugins}}
+    }));
+  }
+
+  // Linha por mês
+  const ctxM=document.getElementById('chartMeses')?.getContext('2d');
+  if(ctxM){
+    _dashCharts.push(new Chart(ctxM,{
+      type:'bar',
+      data:{labels:mesesLabels,datasets:[
+        {label:'Multa',data:mesesKeys.map(k=>mesesMap[k].multa),backgroundColor:'rgba(163,45,45,.7)',borderRadius:3},
+        {label:'Arquivado',data:mesesKeys.map(k=>mesesMap[k].arquivado),backgroundColor:'rgba(59,109,17,.7)',borderRadius:3},
+        {label:'Em julgamento',data:mesesKeys.map(k=>mesesMap[k].em_julgamento),backgroundColor:'rgba(24,95,165,.5)',borderRadius:3},
+        {label:'Pendente',data:mesesKeys.map(k=>mesesMap[k].pendente),backgroundColor:'rgba(186,117,23,.4)',borderRadius:3},
+      ]},
+      options:{...co,scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,ticks:{stepSize:1}}}}
+    }));
+  }
+}
+
+/* PROCESSOS */
+let _allProc=[];
+async function pgProc(){
+  ldg('Carregando processos...');
+  const{data,error}=await sb.from('processos').select('*').order('data_abertura',{ascending:false});
+  if(error){dbErr(error);return;}
+  _allProc=data;
+  renderProcPage(data);
+}
+
+function renderProcPage(ps){
+  setC(`<div class="card">
+    <div class="card-header"><div class="card-title">Processos Administrativos</div>
+    ${isAdmin()?'<button class="btn-blue-sm" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo Processo</button>':''}
+    </div>
+    ${isAdmin()?`<div class="filter-bar">
+      <input type="text" id="fB" placeholder="Buscar fornecedor, nº ou tema..." style="flex:1;min-width:180px" oninput="cliFilter()">
+      <select id="fS" onchange="cliFilter()"><option value="">Todas situações</option><option value="pendente">Pendente</option><option value="em_julgamento">Em julgamento</option><option value="multa">Multa</option><option value="arquivado">Arquivado</option></select>
+      <select id="fA" onchange="cliFilter()"><option value="">Todos analistas</option>${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
+    </div>`:''}
+    <div class="table-wrap" id="tblProc">${buildTbl(ps)}</div>
+  </div>`);
+}
+
+function buildTbl(list){
+  const adm=isAdmin();
+  if(!list.length)return'<div class="empty-state"><i class="ti ti-file-off"></i>Nenhum processo encontrado.</div>';
+  return`<table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Analista</th><th>Situação</th>${adm?'<th>Resultado</th>':''}<th style="width:100px">Ações</th></tr></thead>
+  <tbody>${list.map(p=>{
+    const at=isAtr(p);
+    return`<tr>
+    <td style="font-weight:600;font-size:12px">${p.numero}</td>
+    <td style="font-size:12px">${p.fornecedor}</td>
+    <td style="font-size:12px">${p.tema}</td>
+    <td style="font-size:12px">${p.data_abertura}</td>
+    <td style="font-size:12px">${getANome(p.analista_id)}</td>
+    <td>${getBadge(p.situacao)}${at?' <span class="badge badge-atrasado">Atrasado</span>':''}</td>
+    ${adm?`<td style="font-size:12px">${p.situacao==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,35):p.situacao==='aguardando_correcao'?'<span style="color:#7B2D8B;font-weight:500">Aguard. revisão</span>':p.situacao==='julgado'?'<span style="color:#0C6B3A;font-weight:500">✓ Aprovado</span>':'—'}</td>`:''}
+    <td>
+      <button class="btn-sm" data-id="${p.id}" onclick="verP(this.dataset.id)" title="Visualizar processo"><i class="ti ti-eye"></i></button>
+      ${adm?`<button class="btn-sm" data-id="${p.id}" onclick="editP(this.dataset.id)" title="Editar processo" style="margin-left:2px"><i class="ti ti-edit"></i></button>`:''}
+    </td></tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function cliFilter(){
+  const b=(document.getElementById('fB')||{value:''}).value.toLowerCase();
+  const s=(document.getElementById('fS')||{value:''}).value;
+  const a=(document.getElementById('fA')||{value:''}).value;
+  const list=_allProc.filter(p=>{
+    if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!p.tema.toLowerCase().includes(b))return false;
+    if(s&&p.situacao!==s)return false;
+    if(a&&p.analista_id!==a)return false;
+    return true;
+  });
+  document.getElementById('tblProc').innerHTML=buildTbl(list);
+}
+
+function verP(id){
+  const p=_allProc.find(x=>x.id===id);
+  if(!p)return;
+  showModal(`<h3><i class="ti ti-file-text" style="color:var(--blue)"></i> Processo ${p.numero}</h3>
+<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:12px;margin-bottom:14px">
+  <table class="detail-table" style="width:100%">
+    <tr><td>Fornecedor</td><td><strong>${p.fornecedor}</strong></td></tr>
+    <tr><td>Tema</td><td>${p.tema}</td></tr>
+    <tr><td>Data Abertura</td><td>${p.data_abertura}</td></tr>
+    <tr><td>Analista</td><td>${getANome(p.analista_id)}</td></tr>
+    <tr><td>Situação</td><td>${getBadge(p.situacao)}${isAtr(p)?' <span class="badge badge-atrasado">Atrasado</span>':''}</td></tr>
+    ${p.situacao==='multa'||p.resultado_analista==='multa'?`<tr><td>Valor Multa</td><td style="color:var(--red);font-weight:600">${fmtM(p.valor)}</td></tr>`:''}
+    ${p.situacao==='arquivado'||p.resultado_analista==='arquivado'?`<tr><td>Motivação Arquiv.</td><td>${p.motivo_arquivamento||''}</td></tr>`:''}
+    ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${p.data_atribuicao}</td></tr>`:''}
+    ${p.data_julgamento?`<tr><td>Data Julgamento</td><td>${p.data_julgamento}</td></tr>`:''}
+    ${p.data_correcao?`<tr><td>Data Aprovação</td><td>${p.data_correcao}</td></tr>`:''}
+    ${p.obs_correcao?`<tr><td>Obs. Correção</td><td style="color:#7B2D8B">${p.obs_correcao}</td></tr>`:''}
+  </table>
+</div>
+<div class="modal-footer">
+  ${isAdmin()?`<button class="btn-sec" style="margin-right:auto" data-id="${p.id}" onclick="closeModal();editP(this.dataset.id)"><i class="ti ti-edit"></i> Editar</button>`:''}
+  <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirChat(this.dataset.id,this.dataset.num)"><i class="ti ti-message-circle"></i> Mensagens</button>
+  <button class="btn-primary" style="width:auto" onclick="closeModal()">Fechar</button>
+</div>`);}
+
+function editP(id){
+  const p=_allProc.find(x=>x.id===id);
+  if(!p){alert('Processo não encontrado. Recarregue a lista.');return;}
+  window._editProcId=id;
+  showModal(`<h3><i class="ti ti-edit" style="color:var(--blue)"></i> Editar — ${p.numero}</h3>
+<div class="form-grid">
+  <div class="form-group full"><label>Fornecedor</label><input id="eForn" value="${p.fornecedor}"></div>
+  <div class="form-group full"><label>Tema</label><input id="eTema" value="${p.tema}"></div>
+  <div class="form-group">
+    <label>Analista</label>
+    <select id="eAna">
+      <option value="">— Sem analista —</option>
+      ${analistas.map(a=>`<option value="${a.id}" ${p.analista_id===a.id?'selected':''}>${a.name}</option>`).join('')}
+    </select>
+  </div>
+  <div class="form-group"><label>Data Abertura</label><input type="date" id="eDAb" value="${p.data_abertura||''}"></div>
+  <div class="form-group"><label>Situação</label>
+    <select id="eSit" onchange="onES()">
+      <option value="pendente" ${p.situacao==='pendente'?'selected':''}>Pendente</option>
+      <option value="em_julgamento" ${p.situacao==='em_julgamento'?'selected':''}>Em julgamento</option>
+      <option value="multa" ${p.situacao==='multa'?'selected':''}>Multa</option>
+      <option value="arquivado" ${p.situacao==='arquivado'?'selected':''}>Arquivado</option>
+    </select>
+  </div>
+  <div class="form-group"><label>Data Julgamento</label><input type="date" id="eDJ" value="${p.data_julgamento||''}"></div>
+  <div class="form-group" id="eVG" style="${p.situacao==='multa'?'':'display:none'}"><label>Valor Multa (R$)</label><input type="number" id="eVal" value="${p.valor||''}" min="0" step="0.01"></div>
+  <div class="form-group full" id="eMG" style="${p.situacao==='arquivado'?'':'display:none'}"><label>Motivação Arquivamento</label><textarea id="eMot">${p.motivo_arquivamento||''}</textarea></div>
+</div>
+<div class="modal-footer">
+  <button class="btn-danger" data-id="${p.id}" onclick="delP(this.dataset.id)" style="margin-right:auto"><i class="ti ti-trash"></i> Excluir</button>
+  <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+  <button class="btn-primary" style="width:auto" id="bSE" onclick="saveEdit()"><i class="ti ti-check"></i> Salvar</button>
+</div>`);}
+
+function onES(){const s=document.getElementById('eSit').value;document.getElementById('eVG').style.display=s==='multa'?'':'none';document.getElementById('eMG').style.display=s==='arquivado'?'':'none';}
+
+async function saveEdit(id){
+  const _id=window._editProcId||id;
+  const sit=document.getElementById('eSit').value;
+  if(sit==='multa'&&!document.getElementById('eVal').value){alert('Informe o valor da multa.');return;}
+  if(sit==='arquivado'&&!document.getElementById('eMot').value.trim()){alert('Informe a motivação.');return;}
+  const btn=document.getElementById('bSE');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Salvando...';
+  const upd={
+    fornecedor:document.getElementById('eForn').value.trim(),
+    tema:document.getElementById('eTema').value.trim(),
+    analista_id:document.getElementById('eAna').value||null,
+    data_abertura:document.getElementById('eDAb').value||null,
+    situacao:sit,
+    data_julgamento:document.getElementById('eDJ').value||null,
+    valor:sit==='multa'?parseFloat(document.getElementById('eVal').value):null,
+    motivo_arquivamento:sit==='arquivado'?document.getElementById('eMot').value.trim():null
+  };
+  const{error}=await sb.from('processos').update(upd).eq('id',_id);
+  if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Salvar';alert('Erro: '+error.message);return;}
+  window._editProcId=null;
+  closeModal();pgProc();
+}
+
+async function delP(id){if(!confirm('Excluir este processo permanentemente?'))return;const{error}=await sb.from('processos').delete().eq('id',id);if(error){alert('Erro: '+error.message);return;}window._editProcId=null;closeModal();pgProc();}
+
+function openAddProc(){showModal(`<h3><i class="ti ti-plus" style="color:var(--blue)"></i> Novo Processo</h3>
+<div class="form-grid">
+  <div class="form-group"><label>Nº Processo *</label><input id="pN" placeholder="00000/2024"></div>
+  <div class="form-group"><label>Data de Abertura *</label><input type="date" id="pD"></div>
+  <div class="form-group full"><label>Fornecedor *</label><input id="pF" placeholder="Nome do fornecedor"></div>
+  <div class="form-group full"><label>Tema / Assunto *</label><input id="pT" placeholder="Ex: Cobrança indevida"></div>
+</div>
+<div class="modal-footer">
+  <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+  <button class="btn-primary" style="width:auto" id="bSP" onclick="saveProc()"><i class="ti ti-check"></i> Salvar</button>
+</div>`);}
+
+async function saveProc(){
+  const num=document.getElementById('pN').value.trim(),dt=document.getElementById('pD').value,forn=document.getElementById('pF').value.trim(),tema=document.getElementById('pT').value.trim();
+  if(!num||!dt||!forn||!tema){alert('Preencha todos os campos.');return;}
+  const btn=document.getElementById('bSP');btn.disabled=true;btn.textContent='Salvando...';
+  const{error}=await sb.from('processos').insert({numero:num,fornecedor:forn,tema,data_abertura:dt});
+  if(error){btn.disabled=false;btn.textContent='Salvar';alert('Erro: '+(error.message.includes('unique')?'Número já existe.':error.message));return;}
+  closeModal();pgProc();
+}
+
+/* ANALISTAS */
+async function pgAna(){
+  ldg('Carregando analistas...');
+  const{data,error}=await sb.from('analistas').select('*').order('name');
+  if(error){dbErr(error);return;}
+  analistas=data;
+  const{data:ps}=await sb.from('processos').select('analista_id,situacao');
+  setC(`<div class="card">
+    <div class="card-header"><div class="card-title">Analistas Cadastrados</div>
+    <button class="btn-blue-sm" onclick="openAddAna()"><i class="ti ti-user-plus"></i> Novo Analista</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Login</th><th>Status</th><th>Atribuídos</th><th>Concluídos</th><th style="width:130px">Ações</th></tr></thead>
+    <tbody>${analistas.map(a=>{
+      const m=(ps||[]).filter(p=>p.analista_id===a.id);
+      return`<tr><td style="font-weight:500">${a.name}</td><td><code>${a.login}</code></td>
+      <td><span class="badge ${a.ativo?'badge-arquivado':'badge-pending'}">${a.ativo?'Ativo':'Inativo'}</span></td>
+      <td>${m.length}</td><td>${m.filter(p=>p.situacao==='multa'||p.situacao==='arquivado').length}</td>
+      <td><button class="btn-sm" onclick="openEditAna('${a.id}','${a.name}')"><i class="ti ti-edit"></i></button>
+      <button class="btn-sm" onclick="togAna('${a.id}',${a.ativo})">${a.ativo?'Desativar':'Ativar'}</button></td></tr>`;
+    }).join('')}</tbody></table></div>
+  </div>`);}
+
+function openAddAna(){showModal(`<h3><i class="ti ti-user-plus" style="color:var(--blue)"></i> Novo Analista</h3>
+<div class="form-grid">
+  <div class="form-group full"><label>Nome Completo *</label><input id="aN" placeholder="Nome do analista"></div>
+  <div class="form-group"><label>Login *</label><input id="aL" placeholder="login único"></div>
+  <div class="form-group"><label>Senha *</label><input type="password" id="aS" placeholder="senha"></div>
+</div>
+<div class="modal-footer">
+  <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+  <button class="btn-primary" style="width:auto" id="bSA" onclick="saveAna()"><i class="ti ti-check"></i> Salvar</button>
+</div>`);}
+
+async function saveAna(){
+  const nome=document.getElementById('aN').value.trim(),login=document.getElementById('aL').value.trim(),pass=document.getElementById('aS').value.trim();
+  if(!nome||!login||!pass){alert('Preencha todos os campos.');return;}
+  if(login==='admin'){alert('Login reservado.');return;}
+  const btn=document.getElementById('bSA');btn.disabled=true;btn.textContent='Salvando...';
+  const{error}=await sb.from('analistas').insert({name:nome,login,pass,ativo:true});
+  if(error){btn.disabled=false;btn.textContent='Salvar';alert('Erro: '+(error.message.includes('unique')?'Login já existe.':error.message));return;}
+  closeModal();pgAna();
+}
+
+function openEditAna(id,nome){showModal(`<h3><i class="ti ti-edit" style="color:var(--blue)"></i> Editar Analista</h3>
+<div class="form-grid">
+  <div class="form-group full"><label>Nome</label><input id="aNE" value="${nome}"></div>
+  <div class="form-group full"><label>Nova Senha <span style="color:var(--text-tertiary)">(vazio = manter)</span></label><input type="password" id="aSE" placeholder="nova senha"></div>
+</div>
+<div class="modal-footer">
+  <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+  <button class="btn-primary" style="width:auto" id="bEA" onclick="saveEditAna('${id}')"><i class="ti ti-check"></i> Salvar</button>
+</div>`);}
+
+async function saveEditAna(id){
+  const upd={};const nome=document.getElementById('aNE').value.trim(),pass=document.getElementById('aSE').value.trim();
+  if(nome)upd.name=nome;if(pass)upd.pass=pass;if(!Object.keys(upd).length){closeModal();return;}
+  const btn=document.getElementById('bEA');btn.disabled=true;btn.textContent='Salvando...';
+  const{error}=await sb.from('analistas').update(upd).eq('id',id);
+  if(error){btn.disabled=false;btn.textContent='Salvar';alert('Erro: '+error.message);return;}
+  closeModal();pgAna();
+}
+
+async function togAna(id,ativo){const{error}=await sb.from('analistas').update({ativo:!ativo}).eq('id',id);if(error){alert('Erro: '+error.message);return;}pgAna();}
+
+/* ATRIBUIR */
+async function pgAtrib(){
+  ldg('Carregando processos pendentes...');
+  const{data,error}=await sb.from('processos').select('*').eq('situacao','pendente').order('data_abertura');
+  if(error){dbErr(error);return;}
+  const atv=analistas.filter(a=>a.ativo);
+  setC(`<div class="card">
+    <div class="card-header"><div class="card-title">Atribuir Processos a Analistas</div></div>
+    <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>${data.length} processo(s) pendentes ordenados por data de abertura. Atribuídos passam para <em>Em julgamento</em>.</div>
+    <div class="form-grid" style="max-width:500px;margin-bottom:16px">
+      <div class="form-group"><label>Analista *</label><select id="atA">${atv.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')||'<option>Nenhum ativo</option>'}</select></div>
+      <div class="form-group"><label>Modo</label><select id="atM"><option value="auto">Automático — mais antigos primeiro</option><option value="manual">Manual — selecionar na tabela</option></select></div>
+      <div class="form-group"><label>Quantidade</label><input type="number" id="atQ" value="10" min="1" max="${data.length||1}"></div>
+    </div>
+    <button class="btn-primary" style="width:auto;margin-bottom:16px" id="bAtrib" onclick="execAtrib()"><i class="ti ti-list-check"></i> Atribuir Processos</button>
+    ${data.length?`<div class="card-title" style="margin-bottom:10px;font-size:13px">Processos Pendentes (${data.length})</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th><input type="checkbox" id="cbAll" onclick="document.querySelectorAll('.atcb').forEach(c=>c.checked=this.checked)"></th>
+      <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th>
+    </tr></thead><tbody>${data.map(p=>`<tr>
+      <td><input type="checkbox" class="atcb" value="${p.id}"></td>
+      <td style="font-weight:500">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${p.data_abertura}</td>
+    </tr>`).join('')}</tbody></table></div>`:'<div class="empty-state"><i class="ti ti-checks"></i>Nenhum processo pendente.</div>'}
+  </div>`);}
+
+async function execAtrib(){
+  const anaId=document.getElementById('atA').value;if(!anaId){alert('Selecione um analista.');return;}
+  const modo=document.getElementById('atM').value,hoje=new Date().toISOString().slice(0,10);
+  let ids=[];
+  if(modo==='manual'){ids=Array.from(document.querySelectorAll('.atcb:checked')).map(c=>c.value);if(!ids.length){alert('Selecione ao menos um processo.');return;}}
+  else{const q=parseInt(document.getElementById('atQ').value)||10;ids=Array.from(document.querySelectorAll('.atcb')).slice(0,q).map(c=>c.value);if(!ids.length){alert('Nenhum processo disponível.');return;}}
+  const btn=document.getElementById('bAtrib');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Atribuindo...';
+  const{error}=await sb.from('processos').update({analista_id:anaId,situacao:'em_julgamento',data_atribuicao:hoje}).in('id',ids);
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-list-check"></i> Atribuir Processos';
+  if(error){alert('Erro: '+error.message);return;}
+  alert(`✅ ${ids.length} processo(s) atribuídos a ${analistas.find(a=>a.id===anaId)?.name||''}!`);
+  pgAtrib();
+}
+
+/* MINHA FILA */
+let _fila=[];
+async function pgFila(){
+  ldg('Carregando sua fila...');
+  const[r1,r2]=await Promise.all([
+    sb.from('processos').select('*').eq('analista_id',currentUser.id).eq('situacao','em_julgamento').order('data_atribuicao'),
+    sb.from('processos').select('*').eq('analista_id',currentUser.id).in('situacao',['multa','arquivado']).order('data_julgamento',{ascending:false})
+  ]);
+  if(r1.error||r2.error){dbErr(r1.error||r2.error);return;}
+  _fila=r1.data||[];
+  const conc=r2.data||[],atr=_fila.filter(p=>isAtr(p));
+  setC(`<div class="card">
+    <div class="card-header"><div class="card-title"><i class="ti ti-checklist"></i> Minha Fila — ${currentUser.name}</div></div>
+    ${atr.length?`<div class="alert alert-warn"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><strong>${atr.length} processo(s) atrasados</strong> (mais de 3 dias).</div>`:''}
+    <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Clique em <strong>Julgar</strong> para registrar o resultado.</div>
+    <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Atribuição</th><th>Status</th><th>Ação</th></tr></thead>
+    <tbody>${_fila.length?_fila.map(p=>`<tr>
+      <td style="font-weight:600">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td>
+      <td>${p.data_abertura}</td><td>${p.data_atribuicao||'—'}</td>
+      <td>${isAtr(p)?'<span class="badge badge-atrasado">Atrasado</span>':'<span class="badge badge-inprogress">Em fila</span>'}</td>
+      <td style="display:flex;gap:4px;align-items:center">
+        <button class="btn-blue-sm" onclick="julgar('${p.id}')"><i class="ti ti-gavel"></i> Julgar</button>
+        <button class="btn-sm" onclick="abrirChat('${p.id}','${p.numero}')" title="Mensagens" style="position:relative">
+          <i class="ti ti-message-circle"></i>
+          <span class="chat-unread-dot" data-pid="${p.id}" style="display:none;position:absolute;top:2px;right:2px;width:8px;height:8px;background:#E05C00;border-radius:50%"></span>
+        </button>
+      </td>
+    </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary)">Nenhum processo em sua fila.</td></tr>'}
+    </tbody></table></div>
+    ${conc.length?`<div style="margin-top:20px"><div class="card-title" style="margin-bottom:10px;font-size:13px">Concluídos por mim (${conc.length})</div>
+    <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Situação</th><th>Julgamento</th><th>Resultado</th></tr></thead>
+    <tbody>${conc.map(p=>`<tr><td>${p.numero}</td><td>${p.fornecedor}</td><td>${getBadge(p.situacao)}</td><td>${p.data_julgamento||'—'}</td>
+    <td style="font-size:12px">${p.situacao==='multa'?fmtM(p.valor):(p.motivo_arquivamento||'').slice(0,40)}</td><td><button class="btn-sm" onclick="abrirChat('${p.id}','${p.numero}')" title="Mensagens"><i class="ti ti-message-circle"></i></button></td></tr>`).join('')}
+    </tbody></table></div></div>`:''}
+  </div>`);}
+
+function julgar(id){
+  const p=_fila.find(x=>x.id===id);
+  if(!p)return;
+  // Guarda o id no window para acesso seguro, evitando problema com UUID no inline onclick
+  window._julgandoId=id;
+  const diasAtr=p.data_atribuicao?Math.floor((Date.now()-new Date(p.data_atribuicao))/86400000):0;
+  showModal(`<h3><i class="ti ti-gavel" style="color:var(--blue)"></i> Registrar Julgamento</h3>
+<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:12px;margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Nº Processo</div><strong>${p.numero}</strong></div>
+    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Data Abertura</div>${p.data_abertura}</div>
+    <div style="grid-column:1/-1"><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Fornecedor</div><strong>${p.fornecedor}</strong></div>
+    <div style="grid-column:1/-1"><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Tema</div>${p.tema}</div>
+    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Atribuído em</div>${p.data_atribuicao||'—'}</div>
+    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Dias em julgamento</div><span style="font-weight:600;color:${diasAtr>3?'var(--red)':'var(--blue)'}">${diasAtr} dia(s)</span></div>
+  </div>
+</div>
+<div class="form-grid">
+  <div class="form-group full">
+    <label>Resultado do Julgamento *</label>
+    <select id="jR" onchange="onJC()" style="font-size:14px;padding:10px">
+      <option value="">— Selecione o resultado —</option>
+      <option value="multa">⚖️ Multa</option>
+      <option value="arquivado">📁 Arquivamento</option>
+    </select>
+  </div>
+  <div class="form-group" id="jVG" style="display:none">
+    <label>Valor da Multa (R$) *</label>
+    <input type="number" id="jV" placeholder="Ex: 2500.00" min="0" step="0.01" style="font-size:14px">
+  </div>
+  <div class="form-group full" id="jMG" style="display:none">
+    <label>Motivação do Arquivamento *</label>
+    <textarea id="jM" placeholder="Descreva detalhadamente a motivação do arquivamento..." style="min-height:100px"></textarea>
+  </div>
+  <div class="form-group">
+    <label>Data do Julgamento *</label>
+    <input type="date" id="jD" value="${new Date().toISOString().slice(0,10)}">
+  </div>
+  <div class="form-group full" id="jAnexoGrp" style="display:none">
+    <label>Documento da Multa <span style="font-weight:400;color:var(--text-tertiary)">(opcional — .pdf, .doc, .docx)</span></label>
+    <div id="jAnexoZone" onclick="document.getElementById('jAnexoInput').click()"
+      style="border:2px dashed var(--border-strong);border-radius:var(--radius-md);padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--bg-secondary);transition:border-color .15s"
+      onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor='var(--border-strong)'">
+      <i class="ti ti-cloud-upload" style="font-size:22px;flex-shrink:0;color:var(--blue)"></i>
+      <div>
+        <div id="jAnexoLabel" style="font-size:13px;font-weight:500">Clique para selecionar o arquivo</div>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-top:1px">.pdf, .doc ou .docx — máx. 10MB</div>
+      </div>
+      <input type="file" id="jAnexoInput" style="display:none" accept=".pdf,.doc,.docx" onchange="onJulgarAnexo(this)">
+    </div>
+    <div id="jAnexoPreview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--blue-light);border:1px solid var(--blue-mid);border-radius:var(--radius-md);align-items:center;gap:8px">
+      <i class="ti ti-file-check" style="font-size:18px;color:var(--blue);flex-shrink:0"></i>
+      <span id="jAnexoNome" style="font-size:13px;color:var(--blue);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="limparJulgarAnexo()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;line-height:1;flex-shrink:0" title="Remover">×</button>
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+  <button class="btn-primary" style="width:auto;min-width:160px" id="bJ" onclick="saveJulg()"><i class="ti ti-check"></i> Concluir Julgamento</button>
+</div>`);}
+
+function onJC(){
+  const r=document.getElementById('jR').value;
+  document.getElementById('jVG').style.display=r==='multa'?'':'none';
+  document.getElementById('jMG').style.display=r==='arquivado'?'':'none';
+  document.getElementById('jAnexoGrp').style.display=r==='multa'?'':'none';
+  if(r!=='multa')limparJulgarAnexo();
+}
+function onJulgarAnexo(input){
+  const file=input.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['pdf','doc','docx'].includes(ext)){alert('Apenas .pdf, .doc ou .docx são aceitos.');input.value='';return;}
+  if(file.size>10*1024*1024){alert('Arquivo muito grande. Máximo 10MB.');input.value='';return;}
+  window._julgAnexo=file;
+  document.getElementById('jAnexoLabel').textContent=file.name;
+  document.getElementById('jAnexoNome').textContent=file.name;
+  document.getElementById('jAnexoPreview').style.display='flex';
+  document.getElementById('jAnexoZone').style.borderColor='var(--blue)';
+}
+function limparJulgarAnexo(){
+  window._julgAnexo=null;
+  const inp=document.getElementById('jAnexoInput');if(inp)inp.value='';
+  const lbl=document.getElementById('jAnexoLabel');if(lbl)lbl.textContent='Clique para selecionar o arquivo';
+  const prev=document.getElementById('jAnexoPreview');if(prev)prev.style.display='none';
+  const zone=document.getElementById('jAnexoZone');if(zone)zone.style.borderColor='var(--border-strong)';
+}
+
+async function saveJulg(){
+  const id=window._julgandoId;
+  if(!id){alert('Erro interno: processo não identificado.');return;}
+  const r=document.getElementById('jR').value;
+  if(!r){alert('Selecione o resultado do julgamento.');return;}
+  if(r==='multa'){
+    const v=document.getElementById('jV').value;
+    if(!v||parseFloat(v)<=0){alert('Informe um valor de multa válido.');return;}
+  }
+  if(r==='arquivado'&&!document.getElementById('jM').value.trim()){
+    alert('Informe a motivação do arquivamento.');return;
+  }
+  const dt=document.getElementById('jD').value;
+  if(!dt){alert('Informe a data do julgamento.');return;}
+  const btn=document.getElementById('bJ');
+  btn.disabled=true;
+
+  // ── Upload do arquivo de multa ─────────────────────────────────────────────
+  let anexo_url=null,anexo_nome=null,anexo_tipo=null;
+  if(r==='multa'&&window._julgAnexo){
+    btn.innerHTML='<span class="spin-inline"></span> Enviando arquivo...';
+    const file=window._julgAnexo;
+    const ext=file.name.split('.').pop().toLowerCase();
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=`multas/${id}/${Date.now()}_${safeName}`;
+    const{error:upErr}=await sb.storage.from('anexos-processos').upload(path,file,{cacheControl:'3600',upsert:true});
+    if(upErr){
+      // Se o bucket não existe, oferece continuar sem o arquivo
+      if(upErr.message.toLowerCase().includes('bucket')||upErr.message.toLowerCase().includes('not found')){
+        const ok=confirm('⚠️ Bucket de armazenamento não encontrado.\n\nDeseja continuar salvando o julgamento SEM o arquivo?\n\nPara habilitar uploads: Supabase > Storage > New bucket > "anexos-processos" (Public)');
+        if(!ok){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Concluir Julgamento';return;}
+      } else {
+        btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Concluir Julgamento';
+        alert('Erro ao enviar arquivo:\n'+upErr.message);return;
+      }
+    } else {
+      const{data:urlData}=sb.storage.from('anexos-processos').getPublicUrl(path);
+      anexo_url=urlData.publicUrl;
+      anexo_nome=file.name;
+      anexo_tipo=ext;
+    }
+  }
+
+  btn.innerHTML='<span class="spin-inline"></span> Salvando julgamento...';
+
+  // ── Salva julgamento ────────────────────────────────────────────────────────
+  const upd={
+    situacao:'aguardando_correcao',
+    resultado_analista:r,
+    data_julgamento:dt,
+    valor:r==='multa'?parseFloat(document.getElementById('jV').value):null,
+    motivo_arquivamento:r==='arquivado'?document.getElementById('jM').value.trim():null,
+    anexo_multa_url:anexo_url,
+    anexo_multa_nome:anexo_nome,
+    anexo_multa_tipo:anexo_tipo,
+  };
+  const{error}=await sb.from('processos').update(upd).eq('id',id);
+  if(error){
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Concluir Julgamento';
+    alert('Erro ao salvar: '+error.message);return;
+  }
+
+  // ── Envia arquivo como mensagem no chat automaticamente ────────────────────
+  if(anexo_url){
+    await sb.from('mensagens').insert({
+      processo_id:id,autor_id:currentUser.id,autor_nome:currentUser.name,
+      autor_role:'analista',
+      texto:'📎 Documento do julgamento (multa) anexado para revisão do administrador:',
+      arquivo_url:anexo_url,arquivo_nome:anexo_nome,arquivo_tipo:anexo_tipo,
+      lida_admin:false,lida_analista:true,
+    });
+  }
+
+  window._julgandoId=null;
+  window._julgAnexo=null;
+  closeModal();
+  atualizarBadgeCorrecao();
+  pgFila();
+}
+
+
+/* EDIÇÃO (admin-only) */
+let _editProcs=[];
+async function pgEdicao(){
+  ldg('Carregando processos para edição...');
+  const{data,error}=await sb.from('processos').select('*').order('data_abertura',{ascending:false});
+  if(error){dbErr(error);return;}
+  _editProcs=data;
+  renderEdicao(data);
+}
+
+function renderEdicao(list){
+  setC(`<div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="ti ti-pencil" style="color:var(--blue)"></i> Edição Completa de Processos e Julgamentos</div>
+      <div style="font-size:12px;color:var(--text-secondary)">${list.length} registros</div>
+    </div>
+    <div class="alert alert-warn" style="margin-bottom:12px"><i class="ti ti-shield-lock" style="flex-shrink:0"></i> Área restrita ao Administrador. Alterações são salvas diretamente no banco de dados.</div>
+    <div class="filter-bar">
+      <input type="text" id="eBusca" placeholder="Buscar por nº, fornecedor ou tema..." style="flex:1;min-width:200px" oninput="filtrarEdicao()">
+      <select id="eSitF" onchange="filtrarEdicao()">
+        <option value="">Todas situações</option>
+        <option value="pendente">Pendente</option>
+        <option value="em_julgamento">Em julgamento</option>
+        <option value="multa">Multa</option>
+        <option value="arquivado">Arquivado</option>
+      </select>
+      <select id="eAnaF" onchange="filtrarEdicao()">
+        <option value="">Todos analistas</option>
+        ${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="table-wrap" id="tblEdicao">${buildTblEdicao(list)}</div>
+  </div>`);
+}
+
+function buildTblEdicao(list){
+  if(!list.length) return '<div class="empty-state"><i class="ti ti-file-off"></i>Nenhum processo encontrado.</div>';
+  return `<table><thead><tr>
+    <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th>
+    <th>Analista</th><th>Situação</th><th>Julgamento</th><th>Resultado</th>
+    <th style="width:80px">Editar</th>
+  </tr></thead><tbody>${list.map(p=>`<tr>
+    <td style="font-weight:600;font-size:12px">${p.numero}</td>
+    <td style="font-size:12px">${p.fornecedor}</td>
+    <td style="font-size:12px">${p.tema}</td>
+    <td style="font-size:12px">${p.data_abertura}</td>
+    <td style="font-size:12px">${getANome(p.analista_id)}</td>
+    <td>${getBadge(p.situacao)}</td>
+    <td style="font-size:12px">${p.data_julgamento||'—'}</td>
+    <td style="font-size:12px">${p.situacao==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':p.situacao==='arquivado'?'<span style="color:var(--green)">Arquivado</span>':'—'}</td>
+    <td><button class="btn-blue-sm" style="padding:4px 8px;font-size:11px" onclick="abrirEdicaoCompleta('${p.id}')"><i class="ti ti-pencil"></i> Editar</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function filtrarEdicao(){
+  const b=(document.getElementById('eBusca')||{value:''}).value.toLowerCase();
+  const s=(document.getElementById('eSitF')||{value:''}).value;
+  const a=(document.getElementById('eAnaF')||{value:''}).value;
+  const list=_editProcs.filter(p=>{
+    if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!p.tema.toLowerCase().includes(b))return false;
+    if(s&&p.situacao!==s)return false;
+    if(a&&p.analista_id!==a)return false;
+    return true;
+  });
+  document.getElementById('tblEdicao').innerHTML=buildTblEdicao(list);
+}
+
+function abrirEdicaoCompleta(id){
+  const p=_editProcs.find(x=>x.id===id);
+  if(!p)return;
+  window._editandoId=id;
+  showModal(`<h3><i class="ti ti-pencil" style="color:var(--blue)"></i> Edição Completa — <span style="font-size:13px;font-weight:400">${p.numero}</span></h3>
+
+  <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Dados do Processo</div>
+  <div class="form-grid" style="margin-bottom:14px">
+    <div class="form-group"><label>Nº Processo</label><input id="ecNum" value="${p.numero}"></div>
+    <div class="form-group"><label>Data de Abertura</label><input type="date" id="ecData" value="${p.data_abertura||''}"></div>
+    <div class="form-group full"><label>Fornecedor</label><input id="ecForn" value="${p.fornecedor}"></div>
+    <div class="form-group full"><label>Tema / Assunto</label><input id="ecTema" value="${p.tema}"></div>
+    <div class="form-group">
+      <label>Analista Responsável</label>
+      <select id="ecAna">
+        <option value="">— Sem analista —</option>
+        ${analistas.map(a=>`<option value="${a.id}" ${p.analista_id===a.id?'selected':''}>${a.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>Data de Atribuição</label><input type="date" id="ecDtAtrib" value="${p.data_atribuicao||''}"></div>
+  </div>
+
+  <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Dados do Julgamento</div>
+  <div class="form-grid">
+    <div class="form-group full">
+      <label>Situação / Resultado</label>
+      <select id="ecSit" onchange="onECSit()">
+        <option value="pendente" ${p.situacao==='pendente'?'selected':''}>Pendente</option>
+        <option value="em_julgamento" ${p.situacao==='em_julgamento'?'selected':''}>Em julgamento</option>
+        <option value="multa" ${p.situacao==='multa'?'selected':''}>Multa</option>
+        <option value="arquivado" ${p.situacao==='arquivado'?'selected':''}>Arquivado</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Data do Julgamento</label><input type="date" id="ecDtJulg" value="${p.data_julgamento||''}"></div>
+    <div class="form-group" id="ecValorGrp" style="${p.situacao==='multa'?'':'display:none'}">
+      <label>Valor da Multa (R$)</label>
+      <input type="number" id="ecValor" value="${p.valor||''}" min="0" step="0.01">
+    </div>
+    <div class="form-group full" id="ecMotivoGrp" style="${p.situacao==='arquivado'?'':'display:none'}">
+      <label>Motivação do Arquivamento</label>
+      <textarea id="ecMotivo">${p.motivo_arquivamento||''}</textarea>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-danger" onclick="excluirProcessoEdicao('${p.id}')" style="margin-right:auto"><i class="ti ti-trash"></i> Excluir</button>
+    <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn-primary" style="width:auto;min-width:140px" id="bSalvEC" onclick="salvarEdicaoCompleta()"><i class="ti ti-check"></i> Salvar Alterações</button>
+  </div>`);
+}
+
+function onECSit(){
+  const s=document.getElementById('ecSit').value;
+  document.getElementById('ecValorGrp').style.display=s==='multa'?'':'none';
+  document.getElementById('ecMotivoGrp').style.display=s==='arquivado'?'':'none';
+}
+
+async function salvarEdicaoCompleta(){
+  const id=window._editandoId;
+  if(!id){alert('Erro: processo não identificado.');return;}
+  const sit=document.getElementById('ecSit').value;
+  if(sit==='multa'&&!document.getElementById('ecValor').value){alert('Informe o valor da multa.');return;}
+  if(sit==='arquivado'&&!document.getElementById('ecMotivo').value.trim()){alert('Informe a motivação do arquivamento.');return;}
+  const btn=document.getElementById('bSalvEC');
+  btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Salvando...';
+  const anaId=document.getElementById('ecAna').value||null;
+  const upd={
+    numero:      document.getElementById('ecNum').value.trim(),
+    fornecedor:  document.getElementById('ecForn').value.trim(),
+    tema:        document.getElementById('ecTema').value.trim(),
+    data_abertura: document.getElementById('ecData').value||null,
+    analista_id: anaId,
+    data_atribuicao: document.getElementById('ecDtAtrib').value||null,
+    situacao:    sit,
+    data_julgamento: document.getElementById('ecDtJulg').value||null,
+    valor:       sit==='multa'?parseFloat(document.getElementById('ecValor').value):null,
+    motivo_arquivamento: sit==='arquivado'?document.getElementById('ecMotivo').value.trim():null,
+  };
+  const{error}=await sb.from('processos').update(upd).eq('id',id);
+  if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Salvar Alterações';alert('Erro: '+error.message);return;}
+  window._editandoId=null;
+  closeModal();
+  pgEdicao();
+}
+
+async function excluirProcessoEdicao(id){
+  if(!confirm('Excluir este processo permanentemente? Esta ação não pode ser desfeita.'))return;
+  const{error}=await sb.from('processos').delete().eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  closeModal();pgEdicao();
+}
+
+
+/* BADGE CORREÇÃO */
+async function atualizarBadgeCorrecao(){
+  const{data}=await sb.from('processos').select('id').eq('situacao','aguardando_correcao');
+  const n=(data||[]).length;
+  const badge=document.getElementById('badgeCorrecao');
+  if(!badge)return;
+  badge.textContent=n;
+  if(n>0){badge.classList.remove('hidden');}
+  else{badge.classList.add('hidden');}
+}
+
+/* CORREÇÃO (admin-only) */
+let _corrProcs=[];
+async function pgCorrecao(){
+  ldg('Carregando processos para correção...');
+  const{data,error}=await sb.from('processos').select('*').eq('situacao','aguardando_correcao').order('data_julgamento',{ascending:true});
+  if(error){dbErr(error);return;}
+  _corrProcs=data||[];
+  atualizarBadgeCorrecao();
+  renderCorrecao();
+}
+
+function renderCorrecao(){
+  const list=_corrProcs;
+  setC(`<div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ti ti-alert-circle" style="color:#7B2D8B"></i>
+        Correção de Julgamentos
+        ${list.length?`<span class="nav-badge" style="margin-left:8px;font-size:12px;min-width:22px;height:22px">${list.length}</span>`:''}
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary)">${list.length} processo(s) aguardando revisão do admin</div>
+    </div>
+    <div class="alert" style="background:#F5EBF8;color:#5A1F6B;border:1px solid #C89FD4;margin-bottom:14px">
+      <i class="ti ti-info-circle" style="flex-shrink:0"></i>
+      <div>Estes processos foram julgados pelos analistas e aguardam sua revisão. Você pode <strong>aprovar</strong> o julgamento (envia para Julgados), <strong>corrigir</strong> os dados ou <strong>devolver</strong> ao analista.</div>
+    </div>
+    ${list.length===0?'<div class="empty-state"><i class="ti ti-circle-check" style="color:var(--green)"></i><div style="margin-top:8px;font-weight:500;color:var(--green)">Nenhum processo aguardando correção!</div></div>':`
+    <div class="table-wrap">
+      <table><thead><tr>
+        <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Analista</th>
+        <th>Resultado Analista</th><th>Valor / Motivo</th><th>Data Julgamento</th><th style="width:160px">Ações</th>
+      </tr></thead>
+      <tbody>${list.map(p=>`<tr>
+        <td style="font-weight:600;font-size:12px">${p.numero}</td>
+        <td style="font-size:12px">${p.fornecedor}</td>
+        <td style="font-size:12px">${p.tema}</td>
+        <td style="font-size:12px">${getANome(p.analista_id)}</td>
+        <td>${p.resultado_analista==='multa'?'<span class="badge badge-multa">⚖️ Multa</span>':'<span class="badge badge-arquivado">📁 Arquivamento</span>'}</td>
+        <td style="font-size:12px">
+          ${p.resultado_analista==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':(p.motivo_arquivamento||'').slice(0,40)+(p.motivo_arquivamento&&p.motivo_arquivamento.length>40?'…':'')}
+          ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>${(p.anexo_multa_nome||'Anexo').slice(0,30)}</a>`:''}
+        </td>
+        <td style="font-size:12px">${p.data_julgamento||'—'}</td>
+        <td>
+          <button class="btn-primary" style="width:auto;padding:4px 8px;font-size:11px;margin-bottom:4px;margin-top:0;display:inline-flex" onclick="aprovarCorrecao('${p.id}')"><i class="ti ti-check"></i> Aprovar</button>
+          <button class="btn-blue-sm" style="padding:4px 8px;font-size:11px;margin-bottom:4px" onclick="editarCorrecao('${p.id}')"><i class="ti ti-pencil"></i> Corrigir</button>
+          <button class="btn-danger" style="padding:4px 8px;font-size:11px" onclick="devolverCorrecao('${p.id}')"><i class="ti ti-arrow-back-up"></i> Devolver</button>
+        </td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>`}
+  </div>`);
+}
+
+async function aprovarCorrecao(id){
+  if(!confirm('Aprovar este julgamento? O processo será movido para Julgados.'))return;
+  const p=_corrProcs.find(x=>x.id===id);
+  if(!p)return;
+  // situacao final = resultado_analista (multa ou arquivado), agora como "julgado"
+  const{error}=await sb.from('processos').update({situacao:'julgado',data_correcao:new Date().toISOString().slice(0,10)}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  _corrProcs=_corrProcs.filter(x=>x.id!==id);
+  atualizarBadgeCorrecao();
+  renderCorrecao();
+}
+
+async function devolverCorrecao(id){
+  const motivo=prompt('Motivo da devolução ao analista (opcional):');
+  if(motivo===null)return; // cancelou
+  const{error}=await sb.from('processos').update({situacao:'em_julgamento',obs_correcao:motivo||'Devolvido para revisão'}).eq('id',id);
+  if(error){alert('Erro: '+error.message);return;}
+  _corrProcs=_corrProcs.filter(x=>x.id!==id);
+  atualizarBadgeCorrecao();
+  renderCorrecao();
+}
+
+function editarCorrecao(id){
+  const p=_corrProcs.find(x=>x.id===id);
+  if(!p)return;
+  window._corrigindoId=id;
+  showModal(`<h3><i class="ti ti-pencil" style="color:#7B2D8B"></i> Corrigir Julgamento — <span style="font-size:13px;font-weight:400">${p.numero}</span></h3>
+  <div style="background:#F5EBF8;border-radius:var(--radius-md);padding:10px 12px;margin-bottom:14px;font-size:12px">
+    <div style="color:#5A1F6B;font-weight:500;margin-bottom:4px">Julgamento original do analista ${getANome(p.analista_id)}</div>
+    <div>Resultado: <strong>${p.resultado_analista==='multa'?'Multa: '+fmtM(p.valor):'Arquivamento: '+(p.motivo_arquivamento||'').slice(0,60)}</strong></div>
+  </div>
+  <div class="form-grid">
+    <div class="form-group full"><label>Fornecedor</label><input id="ccForn" value="${p.fornecedor}"></div>
+    <div class="form-group full"><label>Tema</label><input id="ccTema" value="${p.tema}"></div>
+    <div class="form-group full">
+      <label>Resultado Final *</label>
+      <select id="ccRes" onchange="onCCRes()">
+        <option value="multa" ${p.resultado_analista==='multa'?'selected':''}>⚖️ Multa</option>
+        <option value="arquivado" ${p.resultado_analista==='arquivado'?'selected':''}>📁 Arquivamento</option>
+      </select>
+    </div>
+    <div class="form-group" id="ccValorGrp" style="${p.resultado_analista==='multa'?'':'display:none'}">
+      <label>Valor da Multa (R$) *</label>
+      <input type="number" id="ccValor" value="${p.valor||''}" min="0" step="0.01">
+    </div>
+    <div class="form-group full" id="ccMotivoGrp" style="${p.resultado_analista==='arquivado'?'':'display:none'}">
+      <label>Motivação do Arquivamento *</label>
+      <textarea id="ccMotivo">${p.motivo_arquivamento||''}</textarea>
+    </div>
+    <div class="form-group"><label>Data Julgamento</label><input type="date" id="ccDt" value="${p.data_julgamento||new Date().toISOString().slice(0,10)}"></div>
+    <div class="form-group full"><label>Observação de Correção</label><input id="ccObs" placeholder="Descreva o que foi corrigido (opcional)"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn-primary" style="width:auto;background:#7B2D8B;min-width:160px" id="bSCC" onclick="salvarCorrecao()"><i class="ti ti-check"></i> Salvar e Aprovar</button>
+  </div>`);
+}
+
+function onCCRes(){
+  const r=document.getElementById('ccRes').value;
+  document.getElementById('ccValorGrp').style.display=r==='multa'?'':'none';
+  document.getElementById('ccMotivoGrp').style.display=r==='arquivado'?'':'none';
+}
+
+async function salvarCorrecao(){
+  const id=window._corrigindoId;if(!id)return;
+  const res=document.getElementById('ccRes').value;
+  if(res==='multa'&&!document.getElementById('ccValor').value){alert('Informe o valor da multa.');return;}
+  if(res==='arquivado'&&!document.getElementById('ccMotivo').value.trim()){alert('Informe a motivação.');return;}
+  const btn=document.getElementById('bSCC');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Salvando...';
+  const upd={
+    situacao:'julgado',
+    resultado_analista:res,
+    fornecedor:document.getElementById('ccForn').value.trim(),
+    tema:document.getElementById('ccTema').value.trim(),
+    valor:res==='multa'?parseFloat(document.getElementById('ccValor').value):null,
+    motivo_arquivamento:res==='arquivado'?document.getElementById('ccMotivo').value.trim():null,
+    data_julgamento:document.getElementById('ccDt').value,
+    obs_correcao:document.getElementById('ccObs').value.trim()||null,
+    data_correcao:new Date().toISOString().slice(0,10),
+  };
+  const{error}=await sb.from('processos').update(upd).eq('id',id);
+  if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Salvar e Aprovar';alert('Erro: '+error.message);return;}
+  window._corrigindoId=null;
+  _corrProcs=_corrProcs.filter(x=>x.id!==id);
+  atualizarBadgeCorrecao();
+  closeModal();renderCorrecao();
+}
+
+/* JULGADOS (admin-only) */
+let _julgProcs=[];
+async function pgJulgados(){
+  ldg('Carregando processos julgados...');
+  const{data,error}=await sb.from('processos').select('*').eq('situacao','julgado').order('data_correcao',{ascending:false});
+  if(error){dbErr(error);return;}
+  _julgProcs=data||[];
+  renderJulgados(_julgProcs);
+}
+
+function renderJulgados(list){
+  const totalMultas=list.filter(p=>p.resultado_analista==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0);
+  const nMultas=list.filter(p=>p.resultado_analista==='multa').length;
+  const nArq=list.filter(p=>p.resultado_analista==='arquivado').length;
+  setC(`<div>
+    <!-- KPIs -->
+    <div class="metric-grid" style="margin-bottom:14px">
+      <div class="metric-card" style="border-top:3px solid #0C6B3A">
+        <div class="label"><i class="ti ti-circle-check"></i> Total Julgados</div>
+        <div class="value" style="color:#0C6B3A">${list.length}</div>
+      </div>
+      <div class="metric-card" style="border-top:3px solid var(--red)">
+        <div class="label"><i class="ti ti-receipt"></i> Multas</div>
+        <div class="value v-red">${nMultas}</div>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${list.length?Math.round(nMultas/list.length*100):0}% dos julgados</div>
+      </div>
+      <div class="metric-card" style="border-top:3px solid var(--green)">
+        <div class="label"><i class="ti ti-archive"></i> Arquivados</div>
+        <div class="value v-green">${nArq}</div>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">${list.length?Math.round(nArq/list.length*100):0}% dos julgados</div>
+      </div>
+      <div class="metric-card" style="border-top:3px solid var(--red)">
+        <div class="label"><i class="ti ti-currency-dollar"></i> Total Arrecadado</div>
+        <div class="value v-red" style="font-size:17px">${fmtM(totalMultas)}</div>
+        <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px">Média: ${nMultas?fmtM(totalMultas/nMultas):'R$ 0,00'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="ti ti-circle-check" style="color:#0C6B3A"></i> Processos Julgados e Aprovados</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="jBusca" placeholder="Buscar..." style="padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:12px;width:200px" oninput="filtrarJulgados()">
+          <select id="jResF" onchange="filtrarJulgados()" style="padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:12px">
+            <option value="">Todos resultados</option>
+            <option value="multa">Multa</option>
+            <option value="arquivado">Arquivado</option>
+          </select>
+          <select id="jAnaF" onchange="filtrarJulgados()" style="padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-md);font-size:12px">
+            <option value="">Todos analistas</option>
+            ${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap" id="tblJulgados">${buildTblJulgados(list)}</div>
+    </div>
+  </div>`);
+}
+
+function buildTblJulgados(list){
+  if(!list.length)return'<div class="empty-state"><i class="ti ti-files-off"></i>Nenhum processo julgado ainda.</div>';
+  return`<table><thead><tr>
+    <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Analista</th>
+    <th>Resultado</th><th>Valor / Motivação</th><th>Julgamento</th><th>Aprovação</th><th>Correção</th>
+  </tr></thead><tbody>${list.map(p=>`<tr>
+    <td style="font-weight:600;font-size:12px">${p.numero}</td>
+    <td style="font-size:12px">${p.fornecedor}</td>
+    <td style="font-size:12px">${p.tema}</td>
+    <td style="font-size:12px">${getANome(p.analista_id)}</td>
+    <td>${p.resultado_analista==='multa'?'<span class="badge badge-multa">⚖️ Multa</span>':'<span class="badge badge-arquivado">📁 Arquivado</span>'}</td>
+    <td style="font-size:12px">
+      ${p.resultado_analista==='multa'?'<strong style="color:var(--red)">'+fmtM(p.valor)+'</strong>':(p.motivo_arquivamento||'').slice(0,50)+(p.motivo_arquivamento&&p.motivo_arquivamento.length>50?'…':'')}
+      ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>${(p.anexo_multa_nome||'Anexo').slice(0,30)}</a>`:''}
+    </td>
+    <td style="font-size:12px">${p.data_julgamento||'—'}</td>
+    <td style="font-size:12px">${p.data_correcao||'—'}</td>
+    <td style="font-size:11px;color:${p.obs_correcao?'#7B2D8B':'var(--text-tertiary)'}">
+      ${p.obs_correcao?'<i class="ti ti-edit" title="'+p.obs_correcao+'"></i> '+p.obs_correcao.slice(0,30)+(p.obs_correcao.length>30?'…':''):'<span style="opacity:.4">Sem correção</span>'}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function filtrarJulgados(){
+  const b=(document.getElementById('jBusca')||{value:''}).value.toLowerCase();
+  const res=(document.getElementById('jResF')||{value:''}).value;
+  const ana=(document.getElementById('jAnaF')||{value:''}).value;
+  const list=_julgProcs.filter(p=>{
+    if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!p.tema.toLowerCase().includes(b))return false;
+    if(res&&p.resultado_analista!==res)return false;
+    if(ana&&p.analista_id!==ana)return false;
+    return true;
+  });
+  document.getElementById('tblJulgados').innerHTML=buildTblJulgados(list);
+}
+
+/* IMPORTAR */
+function pgImp(){setC(`<div class="card">
+  <div class="card-header"><div class="card-title">Importar Processos via Excel / CSV</div></div>
+  <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Processos com número já cadastrado serão <strong>ignorados automaticamente</strong>. Novos são adicionados sem substituir os existentes. Suporta dois formatos.</div>
+  <div class="upload-zone" onclick="document.getElementById('fImp').click()">
+    <i class="ti ti-cloud-upload" style="font-size:38px;margin-bottom:10px;display:block"></i>
+    <div style="font-weight:600;margin-bottom:4px">Clique para selecionar o arquivo</div>
+    <div style="font-size:12px;color:var(--text-tertiary)">.xlsx, .xls, .csv ou .txt aceitos</div>
+    <input type="file" id="fImp" style="display:none" accept=".xlsx,.xls,.csv,.txt" onchange="doImport(this)">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title" style="font-size:13px;margin-bottom:8px"><i class="ti ti-list" style="color:var(--blue)"></i> Modo 1 — Lista simples de números</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">CSV ou TXT com um número por linha, sem cabeçalho. A data é extraída automaticamente do número. Fornecedor e tema ficam como "A preencher".</div>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:8px;font-family:monospace;font-size:11px;color:var(--text-primary)">
+        20.07.0003.001.00012-301<br>
+        20.07.0003.001.00042-301<br>
+        21.03.0003.001.00009-301<br>
+        <span style="color:var(--text-tertiary)">... (uma por linha)</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title" style="font-size:13px;margin-bottom:8px"><i class="ti ti-table" style="color:var(--blue)"></i> Modo 2 — CSV/Excel estruturado</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">Com cabeçalho e colunas. Permite incluir fornecedor, tema, analista e situação já preenchidos.</div>
+      <div class="table-wrap"><table style="font-size:11px"><thead><tr><th>numero</th><th>fornecedor</th><th>tema</th><th>dataAbertura</th><th>situacao</th></tr></thead>
+      <tbody><tr><td>12345/2024</td><td>Empresa XPTO</td><td>Cobrança</td><td>2024-03-15</td><td>pendente</td></tr></tbody></table></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary)">Colunas opcionais: <code>analista</code> <code>valor</code> <code>motivoArquivamento</code></div>
+    </div>
+  </div>
+  <div id="impRes"></div>
+</div>`);}
+
+// Extrai data_abertura do padrão AA.MM.XXXX.XXX.NNNNN-NNN
+function extrairDataDoNumero(num){
+  const m=num.match(/^(\d{2})\.(\d{2})\./);
+  if(m){const ano='20'+m[1],mes=m[2];if(parseInt(mes)>=1&&parseInt(mes)<=12)return `${ano}-${mes}-01`;}
+  return new Date().toISOString().slice(0,10);
+}
+
+// Detecta se CSV é lista simples de números (sem cabeçalho/colunas)
+function isListaSimples(lines){
+  if(!lines.length)return false;
+  // Se a primeira linha não contém vírgula e parece um número de processo
+  const primeira=lines[0].trim();
+  return !primeira.includes(',') && /\d/.test(primeira);
+}
+
+async function doImport(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('impRes').innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Processando arquivo...</div>`;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    let rows=[];
+    try{
+      if(file.name.toLowerCase().endsWith('.csv')||file.name.toLowerCase().endsWith('.txt')){
+        const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim().replace(/\uFEFF/g,''));
+        if(isListaSimples(lines)){
+          // Modo lista simples: cada linha é um número de processo
+          lines.forEach(l=>{
+            const num=l.trim().replace(/\uFEFF/g,'');
+            if(num) rows.push({numero:num,fornecedor:'',tema:'',dataAbertura:'',situacao:'pendente',analista:'',valor:'',motivoArquivamento:''});
+          });
+        } else {
+          // Modo CSV estruturado com cabeçalho
+          const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'').replace(/\uFEFF/g,''));
+          for(let i=1;i<lines.length;i++){
+            const vals=lines[i].split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+            const obj={};headers.forEach((h,idx)=>obj[h]=vals[idx]||'');
+            rows.push(obj);
+          }
+        }
+      }else{
+        const wb=XLSX.read(e.target.result,{type:'binary'});
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      }
+    }catch(err){document.getElementById('impRes').innerHTML=`<div class="alert alert-error" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Erro ao ler: ${err.message}</div>`;return;}
+
+    const{data:ex}=await sb.from('processos').select('numero');
+    const exN=new Set((ex||[]).map(p=>p.numero));
+    const ins=[];let skip=0;
+
+    rows.forEach((r,idx)=>{
+      const num=(r.numero||r['Nº Processo']||r['numero']||'').toString().trim().replace(/\uFEFF/g,'');
+      if(!num||exN.has(num)){skip++;return;}
+      let aid=null;
+      if(r.analista){const a=analistas.find(x=>x.login===r.analista.toString().trim());if(a)aid=a.id;}
+      const sit=['pendente','em_julgamento','multa','arquivado'].includes(r.situacao)?r.situacao:'pendente';
+      // data_abertura: usa campo se existir, senão extrai do número, senão hoje
+      const dtCampo=(r.dataAbertura||r.data_abertura||r.DataAbertura||'').toString().slice(0,10);
+      const dtFinal=dtCampo||extrairDataDoNumero(num);
+      ins.push({
+        numero:num,
+        fornecedor:(r.fornecedor||r.Fornecedor||'A preencher').toString().trim(),
+        tema:(r.tema||r.Tema||'A preencher').toString().trim(),
+        data_abertura:dtFinal,
+        analista_id:aid,situacao:sit,
+        valor:r.valor?parseFloat(r.valor):null,
+        motivo_arquivamento:r.motivoArquivamento||null,
+        data_julgamento:r.dataJulgamento?r.dataJulgamento.toString().slice(0,10):null,
+        data_atribuicao:aid?new Date().toISOString().slice(0,10):null
+      });
+    });
+
+    if(!ins.length){
+      document.getElementById('impRes').innerHTML=`<div class="alert alert-warn" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Nenhum processo novo encontrado. ${skip} já existiam ou estavam sem número.</div>`;
+      return;
+    }
+
+    // Inserção em lotes de 100
+    let added=0,erros=0;
+    const total=ins.length;
+    for(let i=0;i<total;i+=100){
+      document.getElementById('impRes').innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Inserindo... ${Math.min(i+100,total)} de ${total}</div>`;
+      const{error}=await sb.from('processos').insert(ins.slice(i,i+100));
+      if(error)erros+=Math.min(100,total-i);
+      else added+=Math.min(100,total-i);
+    }
+    input.value='';
+    document.getElementById('impRes').innerHTML=`<div class="alert alert-success" style="margin-top:12px">
+      <i class="ti ti-check"></i>
+      <div><strong>${added} processo(s) adicionados</strong> ao banco de dados. ${skip} ignorados (já existentes).${erros?` <span style="color:var(--red)">${erros} com erro.</span>`:''}<br>
+      <span style="font-size:12px;color:var(--text-secondary)">Processos sem fornecedor/tema ficam com "A preencher" — edite individualmente ou via nova importação complementar.</span></div>
+    </div>`;
+  };
+  if(file.name.toLowerCase().endsWith('.csv')||file.name.toLowerCase().endsWith('.txt'))
+    reader.readAsText(file,'UTF-8');
+  else reader.readAsBinaryString(file);
+}
+
+/* RELATÓRIOS */
+function pgRel(){setC(`<div class="card">
+  <div class="card-header"><div class="card-title">Gerar Relatórios</div></div>
+  <div class="form-grid" style="max-width:600px;margin-bottom:16px">
+    <div class="form-group"><label>Data Abertura — De</label><input type="date" id="rDe"></div>
+    <div class="form-group"><label>Data Abertura — Até</label><input type="date" id="rAte" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="form-group"><label>Analista</label><select id="rAna"><option value="">Todos</option>${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Fornecedor</label><input id="rForn" placeholder="Todos"></div>
+    <div class="form-group"><label>Situação</label><select id="rSit"><option value="">Todas</option><option value="pendente">Pendente</option><option value="em_julgamento">Em julgamento</option><option value="multa">Multa</option><option value="arquivado">Arquivado</option></select></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn-primary" style="width:auto" id="bRH" onclick="gerarRel('html')"><i class="ti ti-download"></i> Exportar HTML</button>
+    <button class="btn-sec" id="bRP" onclick="gerarRel('pdf')"><i class="ti ti-printer"></i> Imprimir / PDF</button>
+  </div>
+  <div id="relRes"></div>
+</div>`);}
+
+async function gerarRel(tipo){
+  const de=document.getElementById('rDe').value,ate=document.getElementById('rAte').value;
+  const ana=document.getElementById('rAna').value,forn=(document.getElementById('rForn').value||'').toLowerCase(),sit=document.getElementById('rSit').value;
+  document.getElementById('bRH').disabled=true;document.getElementById('bRP').disabled=true;
+  document.getElementById('relRes').innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Buscando dados...</div>`;
+  let q=sb.from('processos').select('*').order('data_abertura',{ascending:false});
+  if(de)q=q.gte('data_abertura',de);if(ate)q=q.lte('data_abertura',ate);
+  if(ana)q=q.eq('analista_id',ana);if(sit)q=q.eq('situacao',sit);
+  const{data,error}=await q;
+  document.getElementById('bRH').disabled=false;document.getElementById('bRP').disabled=false;
+  if(error){document.getElementById('relRes').innerHTML=`<div class="alert alert-error" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Erro: ${error.message}</div>`;return;}
+  const list=forn?data.filter(p=>p.fornecedor.toLowerCase().includes(forn)):data;
+  const totM=list.filter(p=>p.situacao==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0);
+  const geradoEm=new Date().toLocaleString('pt-BR');
+  const filtros=[de||ate?`Período: ${de||'início'} a ${ate||'atual'}`:'',ana?'Analista: '+(analistas.find(a=>a.id===ana)?.name||''):'',forn?'Fornecedor: '+forn:'',sit?'Situação: '+sit:''].filter(Boolean).join(' | ');
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório PROCON Maceió</title>
+<style>body{font-family:Arial,sans-serif;font-size:13px;color:#222;margin:24px}h1{font-size:20px;color:#185FA5;margin-bottom:4px}.sub{font-size:12px;color:#666;margin-bottom:4px}.filtros{font-size:12px;color:#555;margin-bottom:16px;padding:8px 12px;background:#f5f7fa;border-radius:6px;border-left:3px solid #185FA5}.resumo{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}.box{border:1px solid #dde;border-radius:6px;padding:10px 16px;min-width:110px;text-align:center}.box .n{font-size:22px;font-weight:700}.box .l{font-size:11px;color:#777;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#185FA5;color:#fff;padding:7px 9px;text-align:left;font-size:11px}td{padding:7px 9px;border-bottom:1px solid #eee}tr:nth-child(even) td{background:#f9f9f9}.badge{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600}.pend{background:#FAEEDA;color:#8a5a00}.emj{background:#deeeff;color:#1a5a9a}.mult{background:#fde;color:#900}.arq{background:#e8fde8;color:#2a7a2a}.footer{margin-top:24px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:10px}@media print{body{margin:8px}@page{margin:1.5cm}}</style>
+</head><body>
+<h1>⚖️ PROCON Maceió — Relatório de Processos Administrativos</h1>
+<div class="sub">Gerado em ${geradoEm}</div>
+${filtros?`<div class="filtros">Filtros: ${filtros}</div>`:''}
+<div class="resumo">
+  <div class="box"><div class="n" style="color:#185FA5">${list.length}</div><div class="l">Total</div></div>
+  <div class="box"><div class="n" style="color:#BA7517">${list.filter(p=>p.situacao==='pendente').length}</div><div class="l">Pendentes</div></div>
+  <div class="box"><div class="n" style="color:#185FA5">${list.filter(p=>p.situacao==='em_julgamento').length}</div><div class="l">Em julgamento</div></div>
+  <div class="box"><div class="n" style="color:#A32D2D">${list.filter(p=>p.situacao==='multa').length}</div><div class="l">Multas</div></div>
+  <div class="box"><div class="n" style="color:#3B6D11">${list.filter(p=>p.situacao==='arquivado').length}</div><div class="l">Arquivados</div></div>
+  <div class="box"><div class="n" style="color:#A32D2D;font-size:15px">${totM.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div><div class="l">Total Multas</div></div>
+</div>
+<table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Analista</th><th>Situação</th><th>Resultado</th><th>Julgamento</th></tr></thead>
+<tbody>${list.map(p=>{const cl={pendente:'pend',em_julgamento:'emj',multa:'mult',arquivado:'arq'}[p.situacao]||'';const lb={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado'}[p.situacao]||p.situacao;
+return`<tr><td><strong>${p.numero}</strong></td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${p.data_abertura}</td><td>${analistas.find(a=>a.id===p.analista_id)?.name||'—'}</td><td><span class="badge ${cl}">${lb}</span></td><td style="font-size:11px">${p.situacao==='multa'?parseFloat(p.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,60):'—'}</td><td>${p.data_julgamento||'—'}</td></tr>`;
+}).join('')}</tbody></table>
+<div class="footer">PROCON Maceió — Sistema de Gestão de Processos | ${list.length} registros</div>
+</body></html>`;
+  if(tipo==='pdf'){const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),600);}else alert('Permita pop-ups.');}
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));a.download=`relatorio_procon_${new Date().toISOString().slice(0,10)}.html`;a.click();}
+  document.getElementById('relRes').innerHTML=`<div class="alert alert-success" style="margin-top:12px"><i class="ti ti-check"></i>Relatório gerado: <strong>${list.length} processo(s)</strong> — Total multas: ${totM.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>`;
+}
+
+
+/* ═══════════════════════════════════════════════════
+   CHAT / MENSAGENS POR PROCESSO
+═══════════════════════════════════════════════════ */
+let _chatProcId=null, _chatProcNum=null, _chatArquivo=null;
+
+async function abrirChat(procId, procNum){
+  _chatProcId=procId;
+  _chatProcNum=procNum;
+  _chatArquivo=null;
+  // Marca mensagens como lidas
+  const campoLida=currentUser.role==='admin'?'lida_admin':'lida_analista';
+  await sb.from('mensagens').update({[campoLida]:true}).eq('processo_id',procId).eq(campoLida,false);
+  atualizarBadgeChat();
+  renderChatModal();
+  carregarMensagens();
+}
+
+function renderChatModal(){
+  showModal(`
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+  <h3 style="margin:0"><i class="ti ti-message-circle" style="color:var(--blue)"></i> Mensagens — <span style="font-size:13px;font-weight:400">${_chatProcNum}</span></h3>
+  <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-secondary);line-height:1">×</button>
+</div>
+<div class="chat-wrap">
+  <div class="chat-messages" id="chatMessages">
+    <div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px">
+      <div class="spinner" style="margin:0 auto 10px;width:22px;height:22px;border-width:2px"></div>
+      Carregando mensagens...
+    </div>
+  </div>
+  <div class="chat-input-bar">
+    <div class="chat-attach-preview hidden" id="attachPreview">
+      <i class="ti ti-paperclip"></i>
+      <span id="attachName"></span>
+      <button onclick="removerAnexo()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;line-height:1;margin-left:auto">×</button>
+    </div>
+    <div class="chat-input-row">
+      <button class="btn-chat-attach" onclick="document.getElementById('chatFileInput').click()" title="Anexar arquivo (.pdf, .doc, .docx)">
+        <i class="ti ti-paperclip"></i>
+      </button>
+      <input type="file" id="chatFileInput" style="display:none" accept=".pdf,.doc,.docx" onchange="selecionarAnexo(this)">
+      <textarea id="chatTexto" placeholder="Digite uma mensagem..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMensagem();}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
+      <button class="btn-chat-send" id="btnEnviar" onclick="enviarMensagem()">
+        <i class="ti ti-send"></i> Enviar
+      </button>
+    </div>
+  </div>
+</div>`, true);
+}
+
+async function carregarMensagens(){
+  const{data,error}=await sb.from('mensagens')
+    .select('*').eq('processo_id',_chatProcId).order('created_at');
+  if(error){
+    document.getElementById('chatMessages').innerHTML=`<div style="text-align:center;color:var(--red);font-size:13px;padding:20px">Erro ao carregar mensagens.</div>`;
+    return;
+  }
+  renderMensagens(data||[]);
+}
+
+function renderMensagens(msgs){
+  const el=document.getElementById('chatMessages');
+  if(!el)return;
+  if(!msgs.length){
+    el.innerHTML=`<div style="text-align:center;color:var(--text-tertiary);font-size:13px;padding:30px">
+      <i class="ti ti-message-off" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4"></i>
+      Nenhuma mensagem ainda.<br>Seja o primeiro a escrever!
+    </div>`;
+    return;
+  }
+  let lastDay='', html='';
+  msgs.forEach(m=>{
+    const dt=new Date(m.created_at);
+    const day=dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    const hora=dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    if(day!==lastDay){
+      html+=`<div class="chat-day-divider">${day}</div>`;
+      lastDay=day;
+    }
+    const isMe=(m.autor_id===currentUser.id)||(currentUser.role==='admin'&&m.autor_id==='admin');
+    const roleLabel=m.autor_role==='admin'?'<i class="ti ti-shield" style="font-size:10px"></i> Admin':m.autor_nome.split(' ')[0];
+    const fileHtml=m.arquivo_url?`<a href="${m.arquivo_url}" target="_blank" class="chat-file">
+      <i class="ti ti-${m.arquivo_tipo==='pdf'?'file-type-pdf':'file-type-doc'}" style="color:${m.arquivo_tipo==='pdf'?'#A32D2D':'#185FA5'}"></i>
+      <span>${m.arquivo_nome||'Anexo'}</span>
+      <i class="ti ti-external-link" style="font-size:11px;margin-left:auto;opacity:.6"></i>
+    </a>`:'';
+    html+=`<div class="chat-bubble ${isMe?'me':'other'}">
+      ${!isMe?`<div style="font-size:10px;font-weight:600;margin-bottom:4px;opacity:.8">${roleLabel}</div>`:''}
+      ${m.texto?`<div>${m.texto.replace(/\n/g,'<br>')}</div>`:''}
+      ${fileHtml}
+      <div class="chat-meta">
+        <span>${hora}</span>
+        ${isMe?`<i class="ti ti-check${m.lida_admin&&m.lida_analista?'-s':''}" style="font-size:11px"></i>`:''}
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+  el.scrollTop=el.scrollHeight;
+}
+
+function selecionarAnexo(input){
+  const file=input.files[0];
+  if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['pdf','doc','docx'].includes(ext)){alert('Apenas arquivos .pdf, .doc ou .docx são aceitos.');input.value='';return;}
+  _chatArquivo=file;
+  document.getElementById('attachName').textContent=file.name;
+  document.getElementById('attachPreview').classList.remove('hidden');
+}
+
+function removerAnexo(){
+  _chatArquivo=null;
+  document.getElementById('chatFileInput').value='';
+  document.getElementById('attachPreview').classList.add('hidden');
+  document.getElementById('attachName').textContent='';
+}
+
+async function enviarMensagem(){
+  const texto=document.getElementById('chatTexto')?.value?.trim()||'';
+  if(!texto&&!_chatArquivo){alert('Digite uma mensagem ou selecione um arquivo.');return;}
+  const btn=document.getElementById('btnEnviar');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span>';}
+
+  let arquivo_url=null, arquivo_nome=null, arquivo_tipo=null;
+
+  // Upload do arquivo se houver
+  if(_chatArquivo){
+    const ext=_chatArquivo.name.split('.').pop().toLowerCase();
+    const path=`${_chatProcId}/${Date.now()}_${_chatArquivo.name.replace(/\s/g,'_')}`;
+    const{data:upData,error:upErr}=await sb.storage.from('anexos-processos').upload(path,_chatArquivo,{cacheControl:'3600',upsert:false});
+    if(upErr){
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Enviar';}
+      alert('Erro ao enviar arquivo: '+upErr.message+'\n\nVerifique se o bucket "anexos-processos" foi criado no Supabase Storage como público.');
+      return;
+    }
+    const{data:urlData}=sb.storage.from('anexos-processos').getPublicUrl(path);
+    arquivo_url=urlData.publicUrl;
+    arquivo_nome=_chatArquivo.name;
+    arquivo_tipo=ext==='pdf'?'pdf':ext;
+  }
+
+  const msg={
+    processo_id:_chatProcId,
+    autor_id:currentUser.id,
+    autor_nome:currentUser.name,
+    autor_role:currentUser.role,
+    texto:texto||null,
+    arquivo_url,arquivo_nome,arquivo_tipo,
+    lida_admin:currentUser.role==='admin',
+    lida_analista:currentUser.role==='analista',
+  };
+
+  const{error}=await sb.from('mensagens').insert(msg);
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Enviar';}
+  if(error){alert('Erro ao enviar: '+error.message);return;}
+
+  // Limpa inputs
+  if(document.getElementById('chatTexto')) document.getElementById('chatTexto').value='';
+  removerAnexo();
+  carregarMensagens();
+}
+
+async function atualizarBadgeChat(){
+  if(!currentUser)return;
+  const campoNaoLido=currentUser.role==='admin'?'lida_admin':'lida_analista';
+  const{data}=await sb.from('mensagens').select('id').eq(campoNaoLido,false)
+    .neq('autor_id',currentUser.role==='admin'?'admin':currentUser.id);
+  const n=(data||[]).length;
+  const badge=document.getElementById('badgeChat');
+  if(!badge)return;
+  if(n>0){badge.textContent=n;badge.classList.remove('hidden');}
+  else{badge.classList.add('hidden');}
+}
+
+function showModal(h,noBgClose){document.getElementById('modalContainer').innerHTML=`<div class="modal-overlay" ${noBgClose?'':'onclick="if(event.target===this)closeModal()"'}><div class="modal">${h}</div></div>`;}
+function closeModal(){document.getElementById('modalContainer').innerHTML='';}
+
+
+/* DARK MODE */
+function toggleDark(){
+  const dark=document.body.classList.toggle('dark');
+  localStorage.setItem('procon_dark',dark?'1':'0');
+  document.getElementById('darkIcon').className=dark?'ti ti-sun':'ti ti-moon';
+}
+function initDark(){
+  if(localStorage.getItem('procon_dark')==='1'){
+    document.body.classList.add('dark');
+    const ic=document.getElementById('darkIcon');
+    if(ic)ic.className='ti ti-sun';
+  }
+}
+initDark();
+
+function _loaderErro(msg){
+  var gl=document.getElementById('globalLoader');
+  if(gl)gl.innerHTML='<div style="text-align:center;max-width:360px;padding:20px">'+
+    '<i class="ti ti-cloud-off" style="font-size:40px;display:block;margin-bottom:12px;color:var(--red)"></i>'+
+    '<strong style="color:var(--text-primary)">Não foi possível carregar a biblioteca do banco de dados.</strong><br><br>'+
+    '<div style="font-size:13px;color:var(--text-secondary);line-height:1.7">'+msg+'</div>'+
+    '<button onclick="location.reload()" style="margin-top:14px;padding:9px 20px;background:#185FA5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500">🔄 Tentar novamente</button>'+
+    '</div>';
+}
+
+// Garante que a lib do Supabase esteja carregada antes de criar o cliente.
+// Se o CDN principal (jsdelivr) não carregar, tenta um espelho (unpkg) antes de falhar.
+function _iniciarApp(){
+  try{
+    sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  }catch(e){
+    _loaderErro('Erro ao iniciar o cliente: '+(e&&e.message?e.message:e));
+    return;
+  }
+  boot();
+}
+
+(function _garantirSupabase(){
+  if(window.supabase&&window.supabase.createClient){_iniciarApp();return;}
+  var s=document.createElement('script');
+  s.src='https://unpkg.com/@supabase/supabase-js@2.39.3/dist/umd/supabase.js';
+  s.onload=function(){
+    if(window.supabase&&window.supabase.createClient){_iniciarApp();}
+    else{_loaderErro('A biblioteca foi baixada mas não inicializou. Recarregue a página.');}
+  };
+  s.onerror=function(){
+    _loaderErro('Verifique sua conexão com a internet. Se estiver em uma rede corporativa, os CDNs podem estar bloqueados.');
+  };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>
