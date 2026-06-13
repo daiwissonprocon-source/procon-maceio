@@ -760,12 +760,15 @@ async function pgDash(){
 }
 
 /* PROCESSOS */
-let _allProc=[];
+let _allProc=[],_procFiltered=[],_procPage=1;
+const _PROC_PP=100;
 async function pgProc(){
   ldg('Carregando processos...');
   const{data,error}=await _fetchAll(()=>sb.from('processos').select('*').order('data_abertura',{ascending:false}));
   if(error){dbErr(error);return;}
   _allProc=data;
+  _procFiltered=[...data];
+  _procPage=1;
   renderProcPage(data);
 }
 
@@ -779,7 +782,7 @@ function renderProcPage(ps){
       <select id="fS" onchange="cliFilter()"><option value="">Todas situações</option><option value="pendente">Pendente</option><option value="em_julgamento">Em julgamento</option><option value="multa">Multa</option><option value="arquivado">Arquivado</option></select>
       <select id="fA" onchange="cliFilter()"><option value="">Todos analistas</option>${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
     </div>`:''}
-    <div class="table-wrap" id="tblProc">${buildTbl(ps)}</div>
+    <div id="tblProc">${buildTblPag()}</div>
   </div>`);
 }
 
@@ -804,17 +807,38 @@ function buildTbl(list){
   }).join('')}</tbody></table>`;
 }
 
+function buildTblPag(){
+  const total=_procFiltered.length;
+  const pages=Math.max(1,Math.ceil(total/_PROC_PP));
+  _procPage=Math.min(_procPage,pages);
+  const from=(_procPage-1)*_PROC_PP,to=Math.min(from+_PROC_PP,total);
+  const controles=total>_PROC_PP?`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;flex-wrap:wrap;gap:8px;border-top:1px solid var(--border)">
+    <span style="font-size:12px;color:var(--text-secondary)">Mostrando <strong>${from+1}–${to}</strong> de <strong>${total}</strong> processos</span>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn-sec" style="padding:4px 12px;font-size:12px" onclick="_procIrPag(${_procPage-1})" ${_procPage<=1?'disabled':''}>◀ Anterior</button>
+      <span style="font-size:12px;color:var(--text-secondary);min-width:90px;text-align:center">Página ${_procPage} / ${pages}</span>
+      <button class="btn-sec" style="padding:4px 12px;font-size:12px" onclick="_procIrPag(${_procPage+1})" ${_procPage>=pages?'disabled':''}>Próxima ▶</button>
+    </div>
+  </div>`:`<div style="padding:6px 4px;font-size:12px;color:var(--text-secondary)">${total} processo(s) encontrado(s)</div>`;
+  return `<div class="table-wrap">${buildTbl(_procFiltered.slice(from,to))}</div>${controles}`;
+}
+function _procIrPag(p){
+  _procPage=p;
+  document.getElementById('tblProc').innerHTML=buildTblPag();
+  document.getElementById('tblProc').scrollIntoView({behavior:'smooth',block:'start'});
+}
 function cliFilter(){
   const b=(document.getElementById('fB')||{value:''}).value.toLowerCase();
   const s=(document.getElementById('fS')||{value:''}).value;
   const a=(document.getElementById('fA')||{value:''}).value;
-  const list=_allProc.filter(p=>{
+  _procFiltered=_allProc.filter(p=>{
     if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!p.tema.toLowerCase().includes(b))return false;
     if(s&&p.situacao!==s)return false;
     if(a&&p.analista_id!==a)return false;
     return true;
   });
-  document.getElementById('tblProc').innerHTML=buildTbl(list);
+  _procPage=1;
+  document.getElementById('tblProc').innerHTML=buildTblPag();
 }
 
 function verP(id){
