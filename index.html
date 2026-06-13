@@ -474,6 +474,7 @@ var VIN_CORES=['#e67e22','#3498db','#2ecc71','#9b59b6','#1abc9c','#e74c3c','#f1c
 })();
 function _marcarVinculados(){
   document.querySelectorAll('table').forEach(function(table){
+    if(table.getAttribute('data-no-vinc'))return;
     var tbody=table.querySelector('tbody');if(!tbody)return;
     var rows=Array.from(tbody.querySelectorAll(':scope > tr'));
     // Detecta coluna do número do processo (cabeçalho "processo" ou padrão NN.NN.)
@@ -930,7 +931,7 @@ function buildGrupoForn(list){
     <td style="text-align:right;font-size:12px;color:${d.valorMultas?'var(--red)':'var(--text-tertiary)'};font-weight:${d.valorMultas?'600':'400'}">${d.valorMultas?fmtM(d.valorMultas):'—'}</td>
   </tr>`).join('');
   return`<div style="padding:6px 4px 2px;font-size:12px;color:var(--text-secondary)">${Object.keys(map).length} fornecedor(es) — ${list.length} processo(s)</div>
-  <div class="table-wrap"><table><thead><tr>
+  <div class="table-wrap"><table data-no-vinc="true"><thead><tr>
     <th>Fornecedor</th><th style="text-align:center">Total</th><th style="text-align:center">Pendente</th>
     <th style="text-align:center">Em Julgamento</th><th style="text-align:center">Concluídos</th>
     <th style="text-align:center">Multas</th><th style="text-align:right">Valor Multas</th>
