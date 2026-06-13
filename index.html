@@ -1290,7 +1290,7 @@ async function pgAtrib(){
 
 async function execAtrib(){
   const anaId=document.getElementById('atA').value;if(!anaId){alert('Selecione um analista.');return;}
-  const modo=document.getElementById('atM').value,hoje=new Date().toISOString().slice(0,10);
+  const modo=document.getElementById('atM').value;
   let ids=[];
   if(modo==='manual'){ids=Array.from(document.querySelectorAll('.atcb:checked')).map(c=>c.value);if(!ids.length){alert('Selecione ao menos um processo.');return;}}
   else{const q=parseInt(document.getElementById('atQ').value)||10;ids=Array.from(document.querySelectorAll('.atcb')).slice(0,q).map(c=>c.value);if(!ids.length){alert('Nenhum processo disponível.');return;}}
@@ -1299,17 +1299,49 @@ async function execAtrib(){
   const idSet=new Set(ids);
   const radSel=new Set(ids.map(id=>{const cb=cbAll.find(c=>c.value===id);const n=(cb?.getAttribute('data-num')||'').split(/\s/)[0];return n.replace(/\d{2}$/,'');}).filter(r=>r.length>5));
   const extras=cbAll.filter(cb=>!idSet.has(cb.value)&&(()=>{const n=(cb.getAttribute('data-num')||'').split(/\s/)[0];return radSel.has(n.replace(/\d{2}$/,''));})());
+  let vinculados=[];
   if(extras.length){
-    const nomes=extras.map(cb=>cb.getAttribute('data-num')).join('\n');
-    if(confirm(`⚠️ Processos vinculados encontrados!\n\nOs processos abaixo têm o mesmo radical dos selecionados e ainda estão pendentes:\n\n${nomes}\n\nDeseja incluí-los no mesmo analista?`)){
-      extras.forEach(cb=>ids.push(cb.value));
+    const nomes=extras.map(cb=>cb.getAttribute('data-num')).join(', ');
+    if(confirm(`⚠️ Processos vinculados encontrados!\n\nOs processos abaixo têm o mesmo radical dos selecionados:\n\n${nomes}\n\nDeseja incluí-los?`)){
+      extras.forEach(cb=>{ids.push(cb.value);vinculados.push(cb.getAttribute('data-num'));});
     }
   }
-  const btn=document.getElementById('bAtrib');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Atribuindo...';
+  // Monta lista de processos para a prévia
+  const anaNome=analistas.find(a=>a.id===anaId)?.name||'—';
+  const allCbs=Array.from(document.querySelectorAll('.atcb'));
+  const prev=ids.map(id=>{
+    const cb=allCbs.find(c=>c.value===id);
+    const num=cb?.getAttribute('data-num')||id;
+    return`<tr style="font-size:12px"><td style="font-weight:600">${num}${vinculados.includes(num)?' <span class="badge badge-recurso" style="font-size:10px">↺ Vinculado</span>':''}</td></tr>`;
+  }).join('');
+  window._atribPendIds=ids;
+  window._atribPendAnaId=anaId;
+  showModal(`<h3><i class="ti ti-list-check" style="color:var(--blue)"></i> Confirmar Atribuição</h3>
+<div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:12px;margin-bottom:14px;font-size:13px">
+  <div><span style="color:var(--text-secondary)">Analista:</span> <strong>${anaNome}</strong></div>
+  <div style="margin-top:4px"><span style="color:var(--text-secondary)">Total de processos:</span> <strong>${ids.length}</strong></div>
+</div>
+<div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-md)">
+<table style="width:100%"><thead><tr><th style="font-size:11px;padding:6px 10px;background:var(--bg-secondary)">Nº Processo</th></tr></thead><tbody>${prev}</tbody></table>
+</div>
+<div class="modal-footer">
+  <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+  <button class="btn-primary" style="width:auto" id="bConfAtrib" onclick="confirmarAtrib()"><i class="ti ti-check"></i> Confirmar Atribuição</button>
+</div>`);}
+
+async function confirmarAtrib(){
+  const ids=window._atribPendIds;
+  const anaId=window._atribPendAnaId;
+  if(!ids||!anaId)return;
+  const btn=document.getElementById('bConfAtrib');
+  btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Atribuindo...';
+  const hoje=new Date().toISOString().slice(0,10);
   const{error}=await sb.from('processos').update({analista_id:anaId,situacao:'em_julgamento',data_atribuicao:hoje}).in('id',ids);
-  btn.disabled=false;btn.innerHTML='<i class="ti ti-list-check"></i> Atribuir Processos';
-  if(error){alert('Erro: '+error.message);return;}
-  alert(`✅ ${ids.length} processo(s) atribuídos a ${analistas.find(a=>a.id===anaId)?.name||''}!`);
+  if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Confirmar Atribuição';alert('Erro: '+error.message);return;}
+  const anaNome=analistas.find(a=>a.id===anaId)?.name||'';
+  closeModal();
+  showToast(`${ids.length} processo(s) atribuídos a ${anaNome}.`,'success',6000);
+  window._atribPendIds=null;window._atribPendAnaId=null;
   pgAtrib();
 }
 
