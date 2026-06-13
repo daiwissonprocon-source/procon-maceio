@@ -225,6 +225,7 @@
       <div class="nav-item admin-only" onclick="showPage('edicao')" data-page="edicao"><i class="ti ti-pencil"></i> Edição</div>
       <div class="nav-item admin-only" onclick="showPage('correcao')" data-page="correcao" id="navCorrecao"><i class="ti ti-alert-circle"></i> Correção <span class="nav-badge hidden" id="badgeCorrecao">0</span></div>
       <div class="nav-item admin-only" onclick="showPage('julgados')" data-page="julgados"><i class="ti ti-circle-check"></i> Julgados</div>
+      <div class="nav-item admin-only" onclick="showPage('produtividade')" data-page="produtividade"><i class="ti ti-chart-bar"></i> Produtividade</div>
       <div class="nav-section">Ferramentas</div>
       <div class="nav-item" onclick="showPage('importar')" data-page="importar"><i class="ti ti-upload"></i> Importar</div>
       <div class="nav-item" onclick="showPage('relatorios')" data-page="relatorios"><i class="ti ti-report"></i> Relatórios</div>
@@ -529,7 +530,7 @@ function dbErr(e){setC(`<div class="alert alert-error"><i class="ti ti-alert-cir
 function showPage(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const a=document.querySelector(`[data-page="${page}"]`);if(a)a.classList.add('active');
-  ({dashboard:pgDash,processos:pgProc,analistas:pgAna,atribuir:pgAtrib,edicao:pgEdicao,correcao:pgCorrecao,julgados:pgJulgados,importar:pgImp,relatorios:pgRel,minhafila:pgFila})[page]?.();
+  ({dashboard:pgDash,processos:pgProc,analistas:pgAna,atribuir:pgAtrib,edicao:pgEdicao,correcao:pgCorrecao,julgados:pgJulgados,produtividade:pgProdutividade,importar:pgImp,relatorios:pgRel,minhafila:pgFila})[page]?.();
 }
 
 /* DASHBOARD */
@@ -1807,6 +1808,86 @@ function filtrarJulgados(){
   });
   document.getElementById('tblJulgados').innerHTML=buildTblJulgados(list);
 }
+
+/* PRODUTIVIDADE */
+async function pgProdutividade(){
+  ldg('Calculando produtividade...');
+  if(!_allProc.length){
+    const r=await _fetchAll(()=>sb.from('processos').select('*'));
+    if(r.error){setC('<p style="padding:20px">Erro ao carregar processos.</p>');return;}
+    _allProc=r.data||[];
+  }
+  const anas=analistas.filter(a=>a.ativo);
+  function calcM(anaId){
+    const ps=_allProc.filter(p=>p.analista_id===anaId);
+    const emFila=ps.filter(p=>p.situacao==='em_julgamento');
+    const conc=ps.filter(p=>['multa','arquivado','julgado','aguardando_correcao'].includes(p.situacao));
+    const par=emFila.filter(p=>isAtr(p));
+    const multas=ps.filter(p=>p.situacao==='multa'||p.resultado_analista==='multa');
+    const valMul=multas.reduce((s,p)=>s+parseFloat(p.valor||0),0);
+    const dArr=conc.filter(p=>p.data_julgamento&&p.data_atribuicao)
+      .map(p=>Math.round((new Date(p.data_julgamento)-new Date(p.data_atribuicao))/86400000))
+      .filter(d=>d>=0);
+    const media=dArr.length?Math.round(dArr.reduce((s,d)=>s+d,0)/dArr.length):null;
+    return{total:ps.length,emFila:emFila.length,conc:conc.length,par:par.length,multas:multas.length,valMul,media};
+  }
+  const rows=anas.map(a=>({a,m:calcM(a.id)})).sort((x,y)=>y.m.total-x.m.total);
+  const totEmFila=_allProc.filter(p=>p.situacao==='em_julgamento').length;
+  const totConc=_allProc.filter(p=>['multa','arquivado','julgado'].includes(p.situacao)).length;
+  const totPar=_allProc.filter(p=>isAtr(p)).length;
+  const totVal=_allProc.filter(p=>p.situacao==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0);
+  const tblRows=rows.map(({a,m})=>`<tr>
+    <td style="font-weight:600">${escHist(a.name)}</td>
+    <td style="text-align:center">${m.total||'—'}</td>
+    <td style="text-align:center">${m.emFila||'—'}</td>
+    <td style="text-align:center">${m.conc||'—'}</td>
+    <td style="text-align:center">${m.par?`<span style="color:var(--red);font-weight:700">${m.par}</span>`:'—'}</td>
+    <td style="text-align:center">${m.multas||'—'}</td>
+    <td style="text-align:right;font-size:12px">${m.valMul?fmtM(m.valMul):'—'}</td>
+    <td style="text-align:center">${m.media!=null?m.media+'d':'—'}</td>
+  </tr>`).join('');
+  setC(`<div class="card">
+  <div class="card-header"><div class="card-title"><i class="ti ti-chart-bar"></i> Produtividade dos Analistas</div></div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;text-align:center">
+      <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Analistas Ativos</div>
+      <div style="font-size:30px;font-weight:700;color:var(--blue)">${anas.length}</div>
+    </div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;text-align:center">
+      <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Em Julgamento</div>
+      <div style="font-size:30px;font-weight:700;color:#E05C00">${totEmFila}</div>
+    </div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;text-align:center">
+      <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Concluídos</div>
+      <div style="font-size:30px;font-weight:700;color:#1A7A4A">${totConc}</div>
+    </div>
+    <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:16px;text-align:center">
+      <div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Parados s/ Julgamento</div>
+      <div style="font-size:30px;font-weight:700;color:var(--red)">${totPar}</div>
+    </div>
+  </div>
+  ${totVal?`<div style="background:#F5EBF8;border-radius:var(--radius-md);padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
+    <i class="ti ti-moneybag" style="color:#7B2D8B;font-size:18px"></i>
+    <span style="font-size:13px;color:#5A1F6B">Total acumulado em multas: <strong style="font-size:16px">${fmtM(totVal)}</strong></span>
+  </div>`:''}
+  <div class="table-wrap"><table>
+    <thead><tr>
+      <th>Analista</th>
+      <th style="text-align:center">Total</th>
+      <th style="text-align:center">Em Fila</th>
+      <th style="text-align:center">Concluídos</th>
+      <th style="text-align:center">Parados</th>
+      <th style="text-align:center">Multas</th>
+      <th style="text-align:right">Valor Multas</th>
+      <th style="text-align:center">Média (dias)</th>
+    </tr></thead>
+    <tbody>${tblRows}</tbody>
+  </table></div>
+  <div style="margin-top:12px;font-size:11px;color:var(--text-tertiary)">
+    * <strong>Parados</strong>: em julgamento há mais de 30 dias sem decisão &nbsp;|&nbsp;
+    * <strong>Média (dias)</strong>: tempo médio entre atribuição e julgamento
+  </div>
+</div>`);}
 
 /* IMPORTAR */
 function pgImp(){setC(`<div class="card">
