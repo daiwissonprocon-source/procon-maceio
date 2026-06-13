@@ -1464,66 +1464,35 @@ function filtrarJulgados(){
 /* IMPORTAR */
 function pgImp(){setC(`<div class="card">
   <div class="card-header"><div class="card-title">Importar Processos via Excel / CSV</div></div>
-  <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Processos com número já cadastrado serão <strong>ignorados automaticamente</strong>. Novos são adicionados sem substituir os existentes. Suporta dois formatos.</div>
+  <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Selecione o arquivo, <strong>mapeie as colunas</strong> e confirme. Processos com número já cadastrado são <strong>ignorados</strong> (não duplica). Datas devem estar no formato <strong>DD/MM/AAAA</strong>.</div>
   <div class="upload-zone" onclick="document.getElementById('fImp').click()">
     <i class="ti ti-cloud-upload" style="font-size:38px;margin-bottom:10px;display:block"></i>
     <div style="font-weight:600;margin-bottom:4px">Clique para selecionar o arquivo</div>
     <div style="font-size:12px;color:var(--text-tertiary)">.xlsx, .xls, .csv ou .txt aceitos</div>
     <input type="file" id="fImp" style="display:none" accept=".xlsx,.xls,.csv,.txt" onchange="doImport(this)">
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-    <div class="card" style="margin-bottom:0">
-      <div class="card-title" style="font-size:13px;margin-bottom:8px"><i class="ti ti-list" style="color:var(--blue)"></i> Modo 1 — Lista simples de números</div>
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">CSV ou TXT com um número por linha, sem cabeçalho. A data é extraída automaticamente do número. Fornecedor e tema ficam como "A preencher".</div>
-      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:8px;font-family:monospace;font-size:11px;color:var(--text-primary)">
-        20.07.0003.001.00012-301<br>
-        20.07.0003.001.00042-301<br>
-        21.03.0003.001.00009-301<br>
-        <span style="color:var(--text-tertiary)">... (uma por linha)</span>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:0">
-      <div class="card-title" style="font-size:13px;margin-bottom:8px"><i class="ti ti-table" style="color:var(--blue)"></i> Modo 2 — CSV/Excel estruturado</div>
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">Com cabeçalho e colunas. Permite incluir fornecedor, tema, analista e situação já preenchidos.</div>
-      <div class="table-wrap"><table style="font-size:11px"><thead><tr><th>numero</th><th>fornecedor</th><th>tema</th><th>dataAbertura</th><th>situacao</th></tr></thead>
-      <tbody><tr><td>12345/2024</td><td>Empresa XPTO</td><td>Cobrança</td><td>2024-03-15</td><td>pendente</td></tr></tbody></table></div>
-      <div style="margin-top:6px;font-size:11px;color:var(--text-secondary)">Colunas opcionais: <code>analista</code> <code>valor</code> <code>motivoArquivamento</code></div>
-    </div>
-  </div>
-
   <div class="card" style="margin-top:16px;margin-bottom:0">
-    <div class="card-title" style="font-size:14px;margin-bottom:4px"><i class="ti ti-clipboard-check" style="color:var(--green)"></i> Padrão para importar sem erros</div>
-    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Use exatamente os nomes de coluna abaixo no cabeçalho da 1ª linha (Excel ou CSV). Maiúsculas/minúsculas importam — escreva igualzinho.</div>
-    <div class="table-wrap">
-      <table style="font-size:12px">
-        <thead><tr><th>Coluna (cabeçalho)</th><th>Obrigatória?</th><th>Formato / valores aceitos</th><th>Exemplo</th></tr></thead>
-        <tbody>
-          <tr><td><code>numero</code></td><td><span class="badge badge-multa">Sim</span></td><td>Texto. Cada número deve ser único (não repetir).</td><td>20.07.0003.001.00012-301</td></tr>
-          <tr><td><code>fornecedor</code></td><td>Recomendada</td><td>Texto. Se vazio, vira "A preencher".</td><td>Empresa XPTO Ltda</td></tr>
-          <tr><td><code>tema</code></td><td>Recomendada</td><td>Texto. Se vazio, vira "A preencher".</td><td>Cobrança indevida</td></tr>
-          <tr><td><code>dataAbertura</code></td><td>Opcional</td><td>Data no formato <strong>AAAA-MM-DD</strong>. Se vazio, é extraída do número ou usa a data de hoje.</td><td>2024-03-15</td></tr>
-          <tr><td><code>situacao</code></td><td>Opcional</td><td>Só estes 4 valores: <code>pendente</code>, <code>em_julgamento</code>, <code>multa</code>, <code>arquivado</code>. Outro valor vira "pendente".</td><td>pendente</td></tr>
-          <tr><td><code>analista</code></td><td>Opcional</td><td>O <strong>login</strong> do analista (não o nome). Em branco = sem analista.</td><td>analista1</td></tr>
-          <tr><td><code>valor</code></td><td>Opcional</td><td>Número. Use <strong>ponto</strong> para centavos, sem "R$" e sem ponto de milhar.</td><td>1500.00</td></tr>
-          <tr><td><code>motivoArquivamento</code></td><td>Opcional</td><td>Texto livre.</td><td>Acordo entre as partes</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="alert alert-warn" style="margin-top:14px;align-items:flex-start">
+    <div class="card-title" style="font-size:14px;margin-bottom:8px"><i class="ti ti-arrows-left-right" style="color:var(--blue)"></i> Como funciona</div>
+    <ol style="margin:0 0 4px 18px;font-size:13px;line-height:1.9;color:var(--text-secondary)">
+      <li>Selecione o arquivo <strong>.xlsx, .xls, .csv ou .txt</strong> (a 1ª linha deve conter os nomes das colunas).</li>
+      <li>O sistema mostra <strong>as colunas da sua planilha</strong> e, ao lado, <strong>os campos do sistema</strong> — você escolhe a correspondência (o sistema já tenta adivinhar).</li>
+      <li>Colunas deixadas como <strong>"Ignorar"</strong> não são importadas, mesmo que existam outras na planilha.</li>
+      <li>Clique em <strong>Importar para o banco</strong>.</li>
+    </ol>
+    <div class="alert alert-warn" style="margin-top:10px;align-items:flex-start">
       <i class="ti ti-alert-triangle" style="flex-shrink:0;margin-top:2px"></i>
       <div>
-        <strong>Regras para não dar erro:</strong>
+        <strong>Importante:</strong>
         <ul style="margin:6px 0 0 18px;line-height:1.85">
-          <li>A coluna <code>numero</code> é a única obrigatória — sem ela a linha é ignorada.</li>
-          <li>Processos com <code>numero</code> já cadastrado são <strong>ignorados</strong> (não duplica e não sobrescreve).</li>
-          <li>Datas sempre no formato <strong>AAAA-MM-DD</strong> (ex.: 2024-03-15). Outros formatos podem ser ignorados.</li>
-          <li><code>situacao</code> deve ser exatamente um dos 4 valores listados (em minúsculas, com "_").</li>
-          <li>Em <code>analista</code> use o <strong>login</strong> (ex.: analista1), não o nome completo.</li>
-          <li>No Excel, mantenha tudo na <strong>1ª aba</strong> da planilha.</li>
-          <li>Se exportar do Notion: exporte como <strong>CSV</strong> e renomeie os cabeçalhos para os nomes desta tabela.</li>
+          <li>O <strong>Nº do Processo</strong> é obrigatório (precisa mapear uma coluna para ele).</li>
+          <li>Datas no formato <strong>DD/MM/AAAA</strong> (ex.: 02/01/2023).</li>
+          <li>Processos com número já cadastrado são <strong>ignorados</strong> (não duplica).</li>
+          <li><strong>Situação</strong>, se importada, deve ser: pendente, em_julgamento, multa ou arquivado.</li>
+          <li><strong>Analista</strong>, se importado, deve ser o login (ex.: analista1).</li>
         </ul>
       </div>
     </div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:10px">Campos disponíveis no sistema: <code>Nº do Processo</code> (obrigatório), <code>Fornecedor</code>, <code>Tema</code>, <code>Data de Abertura</code>, <code>Situação</code>, <code>Analista</code>, <code>Valor</code>, <code>Motivo do Arquivamento</code>, <code>Data de Julgamento</code>.</div>
     <button class="btn btn-secondary" style="margin-top:12px" onclick="baixarModeloImport()"><i class="ti ti-file-download"></i> Baixar modelo (CSV)</button>
   </div>
 
@@ -1532,8 +1501,8 @@ function pgImp(){setC(`<div class="card">
 
 // Gera e baixa um arquivo CSV modelo já com os cabeçalhos no padrão correto
 function baixarModeloImport(){
-  const cabecalho='numero,fornecedor,tema,dataAbertura,situacao,analista,valor,motivoArquivamento';
-  const exemplo='20.07.0003.001.00012-301,Empresa XPTO Ltda,Cobrança indevida,2024-03-15,pendente,analista1,1500.00,';
+  const cabecalho='Nº do Processo,Fornecedor,Tema,Data de Abertura,Situação,Analista,Valor,Motivo do Arquivamento';
+  const exemplo='20.07.0003.001.00012-301,Empresa XPTO Ltda,Cobrança indevida,15/03/2024,pendente,analista1,1500.00,';
   const csv='﻿'+cabecalho+'\n'+exemplo+'\n';
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
@@ -1558,7 +1527,192 @@ function isListaSimples(lines){
   return !primeira.includes(',') && /\d/.test(primeira);
 }
 
+// Campos do sistema disponíveis para o mapeamento
+const CAMPOS_SISTEMA=[
+  {key:'',label:'— Ignorar esta coluna —'},
+  {key:'numero',label:'Nº do Processo (obrigatório)'},
+  {key:'fornecedor',label:'Fornecedor'},
+  {key:'tema',label:'Tema / Assunto'},
+  {key:'data_abertura',label:'Data de Abertura (DD/MM/AAAA)'},
+  {key:'situacao',label:'Situação'},
+  {key:'analista',label:'Analista (login)'},
+  {key:'valor',label:'Valor da Multa'},
+  {key:'motivo_arquivamento',label:'Motivo do Arquivamento'},
+  {key:'data_julgamento',label:'Data de Julgamento (DD/MM/AAAA)'},
+];
+
+function _normCab(s){return (s==null?'':String(s)).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');}
+
+// Tenta adivinhar o campo do sistema a partir do nome da coluna
+function adivinharCampo(cab){
+  const n=_normCab(cab);
+  if(!n) return '';
+  if(n.includes('julgamento')) return 'data_julgamento';
+  if(n.includes('atendimento')||n.includes('nprocesso')||n.includes('numprocesso')||n.includes('processo')||n.includes('numero')||n==='n'||n==='no') return 'numero';
+  if(n.includes('abertura')||(n.includes('data')&&!n.includes('julg'))) return 'data_abertura';
+  if(n.includes('fornecedor')||n.includes('empresa')||n.includes('reclamada')) return 'fornecedor';
+  if(n.includes('tema')||n.includes('assunto')) return 'tema';
+  if(n.includes('situacao')||n.includes('status')) return 'situacao';
+  if(n.includes('analista')||n.includes('responsavel')) return 'analista';
+  if(n.includes('valor')||n.includes('multa')) return 'valor';
+  if(n.includes('motivo')||n.includes('arquiv')) return 'motivo_arquivamento';
+  return '';
+}
+
+// Converte data DD/MM/AAAA (ou variações) para AAAA-MM-DD. Devolve '' se não reconhecer.
+function parseDataBR(v){
+  if(v==null) return '';
+  v=String(v).trim();
+  if(!v) return '';
+  let m=v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){let d=m[1].padStart(2,'0'),mo=m[2].padStart(2,'0'),y=m[3];if(y.length===2)y='20'+y;return y+'-'+mo+'-'+d;}
+  m=v.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if(m){return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');}
+  return '';
+}
+
+// Divide uma linha de CSV respeitando aspas (vírgulas dentro de aspas não separam)
+function _splitCsvLine(line){
+  const out=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){const c=line[i];
+    if(q){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c===','){out.push(cur);cur='';} else if(c==='"'){q=true;} else cur+=c; }
+  }
+  out.push(cur);return out;
+}
+
+// 1) Lê o arquivo e mostra a tela de mapeamento de colunas
 async function doImport(input){
+  const file=input.files[0];if(!file)return;
+  const res=document.getElementById('impRes');
+  res.innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Lendo o arquivo...</div>`;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let headers=[], rows=[];
+    try{
+      if(file.name.toLowerCase().endsWith('.csv')||file.name.toLowerCase().endsWith('.txt')){
+        const lines=e.target.result.split(/\r?\n/).filter(l=>l.replace(/﻿/g,'').trim()!=='');
+        if(!lines.length)throw new Error('Arquivo vazio.');
+        headers=_splitCsvLine(lines[0]).map(h=>h.replace(/﻿/g,'').trim());
+        rows=lines.slice(1).map(l=>{const vals=_splitCsvLine(l);const o={};headers.forEach((h,i)=>o[h]=(vals[i]!=null?String(vals[i]):'').trim());return o;});
+      }else{
+        const wb=XLSX.read(e.target.result,{type:'binary'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+        if(!aoa.length)throw new Error('Planilha vazia.');
+        headers=(aoa[0]||[]).map(h=>String(h).trim());
+        rows=aoa.slice(1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=(r[i]!=null?String(r[i]):'').trim());return o;});
+      }
+    }catch(err){res.innerHTML=`<div class="alert alert-error" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Erro ao ler o arquivo: ${escHist(err.message)}</div>`;return;}
+    window._impHeaders=headers.filter(h=>h!=='');
+    window._impRows=rows;
+    renderMapeamento();
+  };
+  if(file.name.toLowerCase().endsWith('.csv')||file.name.toLowerCase().endsWith('.txt'))
+    reader.readAsText(file,'UTF-8');
+  else reader.readAsBinaryString(file);
+}
+
+// 2) Monta a tela de mapeamento (coluna da planilha  ->  campo do sistema)
+function renderMapeamento(){
+  const headers=window._impHeaders||[], rows=window._impRows||[];
+  const res=document.getElementById('impRes');
+  if(!headers.length){res.innerHTML=`<div class="alert alert-warn" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Não foi possível identificar colunas no arquivo. Verifique se a 1ª linha tem os nomes das colunas.</div>`;return;}
+  const opts=CAMPOS_SISTEMA.map(c=>`<option value="${c.key}">${c.label}</option>`).join('');
+  const linhas=headers.map((h,i)=>{
+    const exemplo=rows.length?String(rows[0][h]==null?'':rows[0][h]).slice(0,40):'';
+    return `<tr>
+      <td style="font-weight:500">${escHist(h)}</td>
+      <td style="font-size:11px;color:var(--text-tertiary)">${escHist(exemplo)}</td>
+      <td style="text-align:center;color:var(--text-tertiary)"><i class="ti ti-arrow-right"></i></td>
+      <td><select id="map_${i}" style="font-size:13px;padding:7px;width:100%">${opts}</select></td>
+    </tr>`;
+  }).join('');
+  res.innerHTML=`
+    <div class="card" style="margin-top:16px;margin-bottom:0;border:1px solid var(--blue-mid)">
+      <div class="card-title" style="font-size:14px;margin-bottom:4px"><i class="ti ti-arrows-left-right" style="color:var(--blue)"></i> Mapear colunas <span style="font-size:12px;font-weight:400;color:var(--text-secondary)">— ${rows.length} linha(s) detectada(s)</span></div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Para cada coluna da sua planilha, escolha o campo correspondente no sistema. Deixe em "Ignorar" o que não quiser importar. <strong>O Nº do Processo é obrigatório.</strong></div>
+      <div class="table-wrap">
+        <table style="font-size:13px">
+          <thead><tr><th>Coluna da planilha</th><th>Exemplo (1ª linha)</th><th></th><th>Campo no sistema</th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="btn-primary" style="width:auto" id="btnExecImp" onclick="executarImportacao()"><i class="ti ti-database-import"></i> Importar para o banco</button>
+        <button class="btn-sec" onclick="cancelarImportacao()">Cancelar</button>
+      </div>
+    </div>`;
+  headers.forEach((h,i)=>{const sel=document.getElementById('map_'+i);if(sel)sel.value=adivinharCampo(h);});
+}
+
+function cancelarImportacao(){
+  window._impHeaders=null;window._impRows=null;
+  const f=document.getElementById('fImp');if(f)f.value='';
+  const res=document.getElementById('impRes');if(res)res.innerHTML='';
+}
+
+// 3) Executa a importação usando o mapeamento escolhido
+async function executarImportacao(){
+  const headers=window._impHeaders||[], rows=window._impRows||[];
+  const res=document.getElementById('impRes');
+  const mapa={}; let temNumero=false;
+  headers.forEach((h,i)=>{const sel=document.getElementById('map_'+i);const campo=sel?sel.value:'';if(campo){mapa[campo]=h;if(campo==='numero')temNumero=true;}});
+  if(!temNumero){alert('Você precisa mapear uma coluna para "Nº do Processo" (obrigatório).');return;}
+  const btn=document.getElementById('btnExecImp');if(btn)btn.disabled=true;
+  const val=(r,campo)=>mapa[campo]!==undefined?(r[mapa[campo]]||''):'';
+
+  const{data:ex}=await sb.from('processos').select('numero');
+  const exN=new Set((ex||[]).map(p=>p.numero));
+  const ins=[];let skip=0;
+  rows.forEach(r=>{
+    const num=String(val(r,'numero')||'').trim().replace(/﻿/g,'');
+    if(!num||exN.has(num)){skip++;return;}
+    exN.add(num);
+    let aid=null; const anaV=String(val(r,'analista')||'').trim();
+    if(anaV){const a=analistas.find(x=>x.login===anaV||x.name===anaV);if(a)aid=a.id;}
+    const sitV=String(val(r,'situacao')||'').trim().toLowerCase();
+    const sit=['pendente','em_julgamento','multa','arquivado'].includes(sitV)?sitV:'pendente';
+    const dtAb=parseDataBR(val(r,'data_abertura'))||extrairDataDoNumero(num);
+    const dtJ=parseDataBR(val(r,'data_julgamento'))||null;
+    let valorV=String(val(r,'valor')||'').replace(/[^\d,.-]/g,'');
+    if(valorV.includes(','))valorV=valorV.replace(/\./g,'').replace(',','.');
+    ins.push({
+      numero:num,
+      fornecedor:String(val(r,'fornecedor')||'').trim()||'A preencher',
+      tema:String(val(r,'tema')||'').trim()||'A preencher',
+      data_abertura:dtAb,
+      analista_id:aid,situacao:sit,
+      valor:valorV?parseFloat(valorV):null,
+      motivo_arquivamento:String(val(r,'motivo_arquivamento')||'').trim()||null,
+      data_julgamento:dtJ,
+      data_atribuicao:aid?new Date().toISOString().slice(0,10):null
+    });
+  });
+
+  if(!ins.length){
+    if(btn)btn.disabled=false;
+    res.innerHTML=`<div class="alert alert-warn" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Nenhum processo novo encontrado. ${skip} já existiam ou estavam sem número.</div>`;
+    return;
+  }
+
+  let added=0,erros=0;const total=ins.length;
+  for(let i=0;i<total;i+=100){
+    res.innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Inserindo... ${Math.min(i+100,total)} de ${total}</div>`;
+    const{error}=await sb.from('processos').insert(ins.slice(i,i+100));
+    if(error)erros+=Math.min(100,total-i);else added+=Math.min(100,total-i);
+  }
+  window._impHeaders=null;window._impRows=null;
+  const f=document.getElementById('fImp');if(f)f.value='';
+  res.innerHTML=`<div class="alert alert-success" style="margin-top:12px">
+    <i class="ti ti-check"></i>
+    <div><strong>${added} processo(s) adicionados</strong> ao banco de dados. ${skip} ignorados (já existiam ou sem número).${erros?` <span style="color:var(--red)">${erros} com erro.</span>`:''}<br>
+    <span style="font-size:12px;color:var(--text-secondary)">Processos sem fornecedor/tema ficam como "A preencher" — edite quando quiser.</span></div>
+  </div>`;
+}
+
+// (função antiga de importação — substituída pelo fluxo com mapeamento acima; mantida desativada)
+async function doImportLegado(input){
   const file=input.files[0];if(!file)return;
   document.getElementById('impRes').innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Processando arquivo...</div>`;
   const reader=new FileReader();
