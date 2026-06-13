@@ -830,6 +830,14 @@ function renderProcPage(ps){
       <input type="text" id="fB" placeholder="Buscar fornecedor, nº ou tema..." style="flex:1;min-width:180px" oninput="cliFilter()">
       <select id="fS" onchange="cliFilter()"><option value="">Todas situações</option><option value="pendente">Pendente</option><option value="em_julgamento">Em julgamento</option><option value="multa">Multa</option><option value="arquivado">Arquivado</option></select>
       <select id="fA" onchange="cliFilter()"><option value="">Todos analistas</option>${analistas.map(a=>`<option value="${a.id}">${a.name}</option>`).join('')}</select>
+      <div style="width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:2px">
+        <span style="font-size:12px;color:var(--text-tertiary);white-space:nowrap">Período:</span>
+        <select id="fCampo" onchange="cliFilter()" style="flex:0 0 auto"><option value="">— Campo —</option><option value="data_abertura">Abertura</option><option value="data_atribuicao">Atribuição</option><option value="data_julgamento">Julgamento</option><option value="data_correcao">Aprovação</option></select>
+        <input type="date" id="fDe" onchange="cliFilter()" title="Data inicial" style="flex:0 0 auto">
+        <span style="font-size:12px;color:var(--text-tertiary)">até</span>
+        <input type="date" id="fAte" onchange="cliFilter()" title="Data final" style="flex:0 0 auto">
+        <button class="btn-sec" style="padding:6px 12px;font-size:12px" onclick="limparFiltros()"><i class="ti ti-x"></i> Limpar filtros</button>
+      </div>
     </div>`:''}
     <div id="tblProc">${buildTblPag()}</div>
   </div>`);
@@ -880,14 +888,27 @@ function cliFilter(){
   const b=(document.getElementById('fB')||{value:''}).value.toLowerCase();
   const s=(document.getElementById('fS')||{value:''}).value;
   const a=(document.getElementById('fA')||{value:''}).value;
+  const campo=(document.getElementById('fCampo')||{value:''}).value;
+  const de=(document.getElementById('fDe')||{value:''}).value;
+  const ate=(document.getElementById('fAte')||{value:''}).value;
   _procFiltered=_allProc.filter(p=>{
-    if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!p.tema.toLowerCase().includes(b))return false;
+    if(b&&!p.fornecedor.toLowerCase().includes(b)&&!p.numero.toLowerCase().includes(b)&&!(p.tema||'').toLowerCase().includes(b))return false;
     if(s&&p.situacao!==s)return false;
     if(a&&p.analista_id!==a)return false;
+    if(campo&&(de||ate)){
+      const d=(p[campo]||'').slice(0,10);
+      if(!d)return false;
+      if(de&&d<de)return false;
+      if(ate&&d>ate)return false;
+    }
     return true;
   });
   _procPage=1;
   document.getElementById('tblProc').innerHTML=buildTblPag();
+}
+function limparFiltros(){
+  ['fB','fS','fA','fCampo','fDe','fAte'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  cliFilter();
 }
 
 function verP(id){
