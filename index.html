@@ -963,9 +963,9 @@ function verP(id){
     <tr><td>Tema</td><td>${p.tema}</td></tr>
     <tr><td>Data Abertura</td><td>${fmtData(p.data_abertura)}</td></tr>
     <tr><td>Analista</td><td>${getANome(p.analista_id)}</td></tr>
-    <tr><td>Situação</td><td>${getBadge(p.situacao)}${p.em_recurso?' <span class="badge badge-recurso">↺ Recurso</span>':''}${badgeAtr(p)}</td></tr>
-    ${p.em_recurso&&p.resultado_original?`<tr><td>Resultado Original</td><td style="color:#5B21B6;font-weight:500"><i class="ti ti-history"></i> ${escHist(p.resultado_original)}</td></tr>`:''}
-    ${p.em_recurso&&p.data_recurso?`<tr><td>Data do Recurso</td><td>${fmtData(p.data_recurso)}</td></tr>`:''}
+    <tr><td>Situação</td><td>${getBadge(p.situacao)}${p.em_recurso?' <span class="badge badge-recurso">↺ Em Recurso</span>':p.resultado_original&&!p.em_recurso?' <span class="badge badge-recurso" style="opacity:.7">↺ Recurso concluído</span>':''}${badgeAtr(p)}</td></tr>
+    ${p.resultado_original?`<tr><td>Resultado Original</td><td style="color:#5B21B6;font-weight:500"><i class="ti ti-history"></i> ${escHist(p.resultado_original)}</td></tr>`:''}
+    ${p.data_recurso?`<tr><td>Data do Recurso</td><td>${fmtData(p.data_recurso)}</td></tr>`:''}
     ${p.situacao==='multa'||p.resultado_analista==='multa'?`<tr><td>Valor Multa</td><td style="color:var(--red);font-weight:600">${fmtM(p.valor)}</td></tr>`:''}
     ${p.situacao==='arquivado'||p.resultado_analista==='arquivado'?`<tr><td>Motivação Arquiv.</td><td>${p.motivo_arquivamento||''}</td></tr>`:''}
     ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${fmtData(p.data_atribuicao)}</td></tr>`:''}
@@ -1808,9 +1808,12 @@ async function aprovarCorrecao(id){
   if(!confirm('Aprovar este julgamento? O processo será movido para Julgados.'))return;
   const p=_corrProcs.find(x=>x.id===id);
   if(!p)return;
-  const{error}=await sb.from('processos').update({situacao:'julgado',data_correcao:new Date().toISOString().slice(0,10)}).eq('id',id);
+  const updApr={situacao:'julgado',data_correcao:new Date().toISOString().slice(0,10)};
+  if(p.em_recurso)updApr.em_recurso=false;
+  const{error}=await sb.from('processos').update(updApr).eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
-  await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:'Julgamento aprovado pelo administrador.',autor_nome:currentUser.name,autor_role:'admin'});
+  const txtApr=p.em_recurso?'Recurso concluído. Julgamento aprovado pelo administrador.':'Julgamento aprovado pelo administrador.';
+  await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:txtApr,autor_nome:currentUser.name,autor_role:'admin'});
   _corrProcs=_corrProcs.filter(x=>x.id!==id);
   atualizarBadgeCorrecao();
   renderCorrecao();
@@ -1872,12 +1875,14 @@ function onCCRes(){
 
 async function salvarCorrecao(){
   const id=window._corrigindoId;if(!id)return;
+  const pCorr=_corrProcs.find(x=>x.id===id);
   const res=document.getElementById('ccRes').value;
   if(res==='multa'&&!document.getElementById('ccValor').value){alert('Informe o valor da multa.');return;}
   if(res==='arquivado'&&!document.getElementById('ccMotivo').value.trim()){alert('Informe a motivação.');return;}
   const btn=document.getElementById('bSCC');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Salvando...';
   const upd={
     situacao:'julgado',
+    em_recurso:pCorr&&pCorr.em_recurso?false:undefined,
     resultado_analista:res,
     fornecedor:document.getElementById('ccForn').value.trim(),
     tema:document.getElementById('ccTema').value.trim(),
@@ -1890,7 +1895,8 @@ async function salvarCorrecao(){
   const{error}=await sb.from('processos').update(upd).eq('id',id);
   if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Salvar e Aprovar';alert('Erro: '+error.message);return;}
   const obs=document.getElementById('ccObs').value.trim();
-  const txtCorr='Julgamento corrigido e aprovado pelo administrador.'+(obs?` Obs: ${obs}`:'');
+  const prefCorr=pCorr&&pCorr.em_recurso?'Recurso concluído. Julgamento corrigido e aprovado pelo administrador.':'Julgamento corrigido e aprovado pelo administrador.';
+  const txtCorr=prefCorr+(obs?` Obs: ${obs}`:'');
   await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:txtCorr,autor_nome:currentUser.name,autor_role:'admin'});
   window._corrigindoId=null;
   _corrProcs=_corrProcs.filter(x=>x.id!==id);
@@ -1962,7 +1968,7 @@ function buildTblJulgados(list){
     <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Analista</th>
     <th>Resultado</th><th>Valor / Motivação</th><th>Julgamento</th><th>Aprovação</th><th>Correção</th>
   </tr></thead><tbody>${list.map(p=>`<tr>
-    <td style="font-weight:600;font-size:12px">${p.numero}</td>
+    <td style="font-weight:600;font-size:12px">${p.numero}${p.resultado_original&&!p.em_recurso?' <span class="badge badge-recurso" style="font-size:10px" title="Resultado original: '+p.resultado_original+'">↺ Recurso</span>':''}</td>
     <td style="font-size:12px">${p.fornecedor}</td>
     <td style="font-size:12px">${p.tema}</td>
     <td style="font-size:12px">${getANome(p.analista_id)}</td>
