@@ -831,7 +831,7 @@ async function pgDash(){
 }
 
 /* PROCESSOS */
-let _allProc=[],_procFiltered=[],_procPage=1;
+let _allProc=[],_procFiltered=[],_procPage=1,_procGroupMode=false;
 const _PROC_PP=100;
 async function pgProc(){
   ldg('Carregando processos...');
@@ -846,7 +846,8 @@ async function pgProc(){
 function renderProcPage(ps){
   setC(`<div class="card">
     <div class="card-header"><div class="card-title">Processos Administrativos</div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-sec" style="padding:5px 10px;font-size:12px" onclick="_toggleGrupo()" title="Alternar entre lista e agrupamento por fornecedor"><i class="ti ti-${_procGroupMode?'list':'building-store'}"></i> ${_procGroupMode?'Lista':'Agrupar'}</button>
       ${isAdmin()?'<button class="btn-blue-sm" onclick="exportarExcel()" title="Exportar lista atual para Excel"><i class="ti ti-table-export"></i> Exportar Excel</button>':''}
       ${isAdmin()?'<button class="btn-blue-sm" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo Processo</button>':''}
     </div>
@@ -890,6 +891,7 @@ function buildTbl(list){
 }
 
 function buildTblPag(){
+  if(_procGroupMode)return buildGrupoForn(_procFiltered);
   const total=_procFiltered.length;
   const pages=Math.max(1,Math.ceil(total/_PROC_PP));
   _procPage=Math.min(_procPage,pages);
@@ -903,6 +905,41 @@ function buildTblPag(){
     </div>
   </div>`:`<div style="padding:6px 4px;font-size:12px;color:var(--text-secondary)">${total} processo(s) encontrado(s)</div>`;
   return `<div class="table-wrap">${buildTbl(_procFiltered.slice(from,to))}</div>${controles}`;
+}
+function _toggleGrupo(){_procGroupMode=!_procGroupMode;document.getElementById('tblProc').innerHTML=buildTblPag();renderProcPage(_procFiltered);}
+function buildGrupoForn(list){
+  if(!list.length)return'<div class="empty-state"><i class="ti ti-file-off"></i>Nenhum processo encontrado.</div>';
+  const map={};
+  list.forEach(p=>{
+    const k=p.fornecedor||'—';
+    if(!map[k])map[k]={total:0,pendente:0,em_julgamento:0,concluidos:0,multas:0,valorMultas:0,recurso:0};
+    map[k].total++;
+    if(p.situacao==='pendente')map[k].pendente++;
+    else if(p.situacao==='em_julgamento')map[k].em_julgamento++;
+    else map[k].concluidos++;
+    if(p.situacao==='multa'||p.resultado_analista==='multa'){map[k].multas++;map[k].valorMultas+=parseFloat(p.valor||0);}
+    if(p.em_recurso)map[k].recurso++;
+  });
+  const rows=Object.entries(map).sort((a,b)=>b[1].total-a[1].total).map(([forn,d])=>`<tr>
+    <td style="font-weight:600;font-size:12px"><span style="cursor:pointer;color:var(--blue);text-decoration:underline dotted" onclick="filtrarPorFornecedor('${forn.replace(/'/g,"\\'")}')" title="Filtrar por este fornecedor">${forn}</span>${d.recurso?` <span class="badge badge-recurso" style="font-size:10px">↺ ${d.recurso}</span>`:''}</td>
+    <td style="text-align:center;font-weight:700">${d.total}</td>
+    <td style="text-align:center">${d.pendente?`<span class="badge badge-pendente">${d.pendente}</span>`:'—'}</td>
+    <td style="text-align:center">${d.em_julgamento?`<span class="badge badge-inprogress">${d.em_julgamento}</span>`:'—'}</td>
+    <td style="text-align:center">${d.concluidos?`<span class="badge badge-julgado">${d.concluidos}</span>`:'—'}</td>
+    <td style="text-align:center">${d.multas?`<span class="badge badge-multa">${d.multas}</span>`:'—'}</td>
+    <td style="text-align:right;font-size:12px;color:${d.valorMultas?'var(--red)':'var(--text-tertiary)'};font-weight:${d.valorMultas?'600':'400'}">${d.valorMultas?fmtM(d.valorMultas):'—'}</td>
+  </tr>`).join('');
+  return`<div style="padding:6px 4px 2px;font-size:12px;color:var(--text-secondary)">${Object.keys(map).length} fornecedor(es) — ${list.length} processo(s)</div>
+  <div class="table-wrap"><table><thead><tr>
+    <th>Fornecedor</th><th style="text-align:center">Total</th><th style="text-align:center">Pendente</th>
+    <th style="text-align:center">Em Julgamento</th><th style="text-align:center">Concluídos</th>
+    <th style="text-align:center">Multas</th><th style="text-align:right">Valor Multas</th>
+  </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function filtrarPorFornecedor(forn){
+  _procGroupMode=false;
+  const fB=document.getElementById('fB');if(fB)fB.value=forn;
+  cliFilter();
 }
 function _procIrPag(p){
   _procPage=p;
