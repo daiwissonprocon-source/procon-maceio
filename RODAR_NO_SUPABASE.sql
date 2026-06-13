@@ -72,4 +72,11 @@ CREATE INDEX IF NOT EXISTS idx_andamentos_processo ON andamentos(processo_id);
 
 GRANT ALL ON andamentos TO anon;
 GRANT ALL ON andamentos TO authenticated;
-ALTER TABLE andamentos DISABLE ROW LEVEL SECURITY;
+
+-- Libera acesso público (o portal usa a chave anônima).
+-- Em vez de desativar o RLS (que pode não persistir em alguns projetos),
+-- criamos uma política que permite todas as operações.
+ALTER TABLE andamentos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "andamentos_acesso_total" ON andamentos;
+CREATE POLICY "andamentos_acesso_total" ON andamentos
+  FOR ALL USING (true) WITH CHECK (true);
