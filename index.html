@@ -221,7 +221,7 @@
       <div class="nav-item" onclick="showPage('processos')" data-page="processos"><i class="ti ti-file-text"></i> Processos</div>
       <div class="nav-section admin-only">Administração</div>
       <div class="nav-item admin-only" onclick="showPage('analistas')" data-page="analistas"><i class="ti ti-users"></i> Analistas</div>
-      <div class="nav-item admin-only" onclick="showPage('atribuir')" data-page="atribuir"><i class="ti ti-list-check"></i> Atribuir</div>
+      <div class="nav-item admin-only" onclick="showPage('atribuir')" data-page="atribuir"><i class="ti ti-list-check"></i> Atribuir <span class="nav-badge hidden" id="badgeAtraso">0</span></div>
       <div class="nav-item admin-only" onclick="showPage('edicao')" data-page="edicao"><i class="ti ti-pencil"></i> Edição</div>
       <div class="nav-item admin-only" onclick="showPage('correcao')" data-page="correcao" id="navCorrecao"><i class="ti ti-alert-circle"></i> Correção <span class="nav-badge hidden" id="badgeCorrecao">0</span></div>
       <div class="nav-item admin-only" onclick="showPage('julgados')" data-page="julgados"><i class="ti ti-circle-check"></i> Julgados</div>
@@ -229,7 +229,7 @@
       <div class="nav-item" onclick="showPage('importar')" data-page="importar"><i class="ti ti-upload"></i> Importar</div>
       <div class="nav-item" onclick="showPage('relatorios')" data-page="relatorios"><i class="ti ti-report"></i> Relatórios</div>
       <div class="nav-section analista-only">Julgamento</div>
-      <div class="nav-item analista-only" onclick="showPage('minhafila')" data-page="minhafila"><i class="ti ti-checklist"></i> Minha Fila <span id="badgeChat" class="nav-badge-msg hidden"></span></div>
+      <div class="nav-item analista-only" onclick="showPage('minhafila')" data-page="minhafila"><i class="ti ti-checklist"></i> Minha Fila <span class="nav-badge hidden" id="badgeAtrasoFila">0</span><span id="badgeChat" class="nav-badge-msg hidden"></span></div>
     </nav>
     <main class="content" id="mainContent"></main>
   </div>
@@ -327,6 +327,8 @@ function enterApp(){
   showPage(currentUser.role==='analista'?'minhafila':'dashboard');
   atualizarBadgeChat();
   setInterval(()=>atualizarBadgeChat(),30000);
+  atualizarBadgeAtraso();
+  setInterval(()=>atualizarBadgeAtraso(),60000);
   if(currentUser.role==='admin') atualizarBadgeCorrecao();
 }
 
@@ -515,6 +517,9 @@ function _marcarVinculados(){
 })();
 
 function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_atribuicao)return false;return(Date.now()-new Date(p.data_atribuicao))/86400000>3;}
+function diasAtr(p){if(!isAtr(p))return 0;return Math.floor((Date.now()-new Date(p.data_atribuicao))/86400000);}
+function badgeAtr(p){const d=diasAtr(p);return d?`<span class="badge badge-atrasado">⚠ Atrasado (${d}d)</span>`:'';}
+
 function getANome(id){if(!id)return '<span style="color:var(--text-tertiary)">—</span>';const a=analistas.find(x=>x.id===id);return a?a.name:'—';}
 function getBadge(s){const c={pendente:'badge-pending',em_julgamento:'badge-inprogress',multa:'badge-multa',arquivado:'badge-arquivado',aguardando_correcao:'badge-correcao',julgado:'badge-julgado'};const l={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguard. Correção',julgado:'Julgado'};return`<span class="badge ${c[s]||''}">${l[s]||s}</span>`;}
 function setC(h){document.getElementById('mainContent').innerHTML=h;}
@@ -642,7 +647,7 @@ async function pgDash(){
     </div>
   </div>
 
-  ${atr.length?`<div class="alert alert-warn" style="margin-bottom:16px"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><div><strong>${atr.length} processo(s) em atraso (&gt;3 dias):</strong> ${atr.map(p=>p.numero).join(', ')}</div></div>`:''}
+  ${atr.length?`<div class="alert alert-warn" style="margin-bottom:16px"><i class="ti ti-alert-triangle" style="flex-shrink:0;margin-top:2px"></i><div><strong>${atr.length} processo(s) parado(s) há mais de 3 dias sem julgamento:</strong>${Object.entries(atr.reduce((acc,p)=>{const n=analistas.find(x=>x.id===p.analista_id)?.name||'Sem analista';if(!acc[n])acc[n]=[];acc[n].push(p);return acc;},{})).map(([nome,procs])=>`<div style="margin-top:5px"><strong>${nome}:</strong> ${procs.map(p=>`<span style="white-space:nowrap">${p.numero} <span style="color:var(--red);font-size:11px">(${diasAtr(p)}d)</span></span>`).join(', ')}</div>`).join('')}</div></div>`:''}
 
   <!-- CHARTS ROW 1 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
@@ -790,7 +795,7 @@ function buildTbl(list){
     <td style="font-size:12px">${p.tema}</td>
     <td style="font-size:12px">${fmtData(p.data_abertura)}</td>
     <td style="font-size:12px">${getANome(p.analista_id)}</td>
-    <td>${getBadge(p.situacao)}${at?' <span class="badge badge-atrasado">Atrasado</span>':''}</td>
+    <td>${getBadge(p.situacao)}${at?' '+badgeAtr(p):''}</td>
     ${adm?`<td style="font-size:12px">${p.situacao==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,35):p.situacao==='aguardando_correcao'?'<span style="color:#7B2D8B;font-weight:500">Aguard. revisão</span>':p.situacao==='julgado'?'<span style="color:#0C6B3A;font-weight:500">✓ Aprovado</span>':'—'}</td>`:''}
     <td>
       <button class="btn-sm" data-id="${p.id}" onclick="verP(this.dataset.id)" title="Visualizar processo"><i class="ti ti-eye"></i></button>
@@ -822,7 +827,7 @@ function verP(id){
     <tr><td>Tema</td><td>${p.tema}</td></tr>
     <tr><td>Data Abertura</td><td>${fmtData(p.data_abertura)}</td></tr>
     <tr><td>Analista</td><td>${getANome(p.analista_id)}</td></tr>
-    <tr><td>Situação</td><td>${getBadge(p.situacao)}${isAtr(p)?' <span class="badge badge-atrasado">Atrasado</span>':''}</td></tr>
+    <tr><td>Situação</td><td>${getBadge(p.situacao)}${badgeAtr(p)}</td></tr>
     ${p.situacao==='multa'||p.resultado_analista==='multa'?`<tr><td>Valor Multa</td><td style="color:var(--red);font-weight:600">${fmtM(p.valor)}</td></tr>`:''}
     ${p.situacao==='arquivado'||p.resultado_analista==='arquivado'?`<tr><td>Motivação Arquiv.</td><td>${p.motivo_arquivamento||''}</td></tr>`:''}
     ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${fmtData(p.data_atribuicao)}</td></tr>`:''}
@@ -1045,15 +1050,17 @@ async function pgFila(){
   if(r1.error||r2.error){dbErr(r1.error||r2.error);return;}
   _fila=r1.data||[];
   const conc=r2.data||[],atr=_fila.filter(p=>isAtr(p));
+  const bFila=document.getElementById('badgeAtrasoFila');
+  if(bFila){bFila.textContent=atr.length;bFila.classList.toggle('hidden',atr.length===0);}
   setC(`<div class="card">
     <div class="card-header"><div class="card-title"><i class="ti ti-checklist"></i> Minha Fila — ${currentUser.name}</div></div>
-    ${atr.length?`<div class="alert alert-warn"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><strong>${atr.length} processo(s) atrasados</strong> (mais de 3 dias).</div>`:''}
+    ${atr.length?`<div class="alert alert-warn"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><div><strong>${atr.length} processo(s) parado(s) sem julgamento:</strong> ${atr.map(p=>`${p.numero} <span style="color:var(--red);font-size:11px">(${diasAtr(p)}d)</span>`).join(', ')}</div></div>`:''}
     <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Clique em <strong>Julgar</strong> para registrar o resultado.</div>
     <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Atribuição</th><th>Status</th><th>Ação</th></tr></thead>
-    <tbody>${_fila.length?_fila.map(p=>`<tr>
+    <tbody>${_fila.length?[..._fila].sort((a,b)=>diasAtr(b)-diasAtr(a)).map(p=>`<tr${isAtr(p)?' style="border-left:3px solid var(--red)"':''}>
       <td style="font-weight:600">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td>
       <td>${fmtData(p.data_abertura)}</td><td>${fmtData(p.data_atribuicao)||'—'}</td>
-      <td>${isAtr(p)?'<span class="badge badge-atrasado">Atrasado</span>':'<span class="badge badge-inprogress">Em fila</span>'}</td>
+      <td>${isAtr(p)?badgeAtr(p):'<span class="badge badge-inprogress">Em fila</span>'}</td>
       <td style="display:flex;gap:4px;align-items:center">
         <button class="btn-blue-sm" onclick="julgar('${p.id}')"><i class="ti ti-gavel"></i> Julgar</button>
         <button class="btn-sm" onclick="abrirChat('${p.id}','${p.numero}')" title="Mensagens" style="position:relative">
@@ -1442,6 +1449,21 @@ async function atualizarBadgeCorrecao(){
   badge.textContent=n;
   if(n>0){badge.classList.remove('hidden');}
   else{badge.classList.add('hidden');}
+}
+
+/* BADGE ATRASO — mostra contagem de processos parados (>3 dias em julgamento) */
+async function atualizarBadgeAtraso(){
+  const{data}=await sb.from('processos').select('id,analista_id,data_atribuicao,situacao').eq('situacao','em_julgamento');
+  const todos=(data||[]).filter(isAtr);
+  // badge admin (nav Atribuir)
+  const bAdm=document.getElementById('badgeAtraso');
+  if(bAdm){bAdm.textContent=todos.length;bAdm.classList.toggle('hidden',todos.length===0);}
+  // badge analista (nav Minha Fila) — filtra só os do usuário atual
+  if(currentUser?.role==='analista'){
+    const meus=todos.filter(p=>p.analista_id===currentUser.id);
+    const bFila=document.getElementById('badgeAtrasoFila');
+    if(bFila){bFila.textContent=meus.length;bFila.classList.toggle('hidden',meus.length===0);}
+  }
 }
 
 /* CORREÇÃO (admin-only) */
