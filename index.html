@@ -1090,13 +1090,14 @@ async function pgAna(){
   setC(`<div class="card">
     <div class="card-header"><div class="card-title">Analistas Cadastrados</div>
     <button class="btn-blue-sm" onclick="openAddAna()"><i class="ti ti-user-plus"></i> Novo Analista</button></div>
-    <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Login</th><th>Status</th><th>Atribuídos</th><th>Concluídos</th><th style="width:130px">Ações</th></tr></thead>
+    <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Login</th><th>Status</th><th>Atribuídos</th><th>Concluídos</th><th style="text-align:center">Meta/mês</th><th style="width:130px">Ações</th></tr></thead>
     <tbody>${analistas.map(a=>{
       const m=(ps||[]).filter(p=>p.analista_id===a.id);
       return`<tr><td style="font-weight:500">${a.name}</td><td><code>${a.login}</code></td>
       <td><span class="badge ${a.ativo?'badge-arquivado':'badge-pending'}">${a.ativo?'Ativo':'Inativo'}</span></td>
       <td>${m.length}</td><td>${m.filter(p=>p.situacao==='multa'||p.situacao==='arquivado').length}</td>
-      <td><button class="btn-sm" onclick="openEditAna('${a.id}','${a.name}')"><i class="ti ti-edit"></i></button>
+      <td style="text-align:center">${a.meta_mensal?`<span style="font-weight:600;color:var(--blue)">${a.meta_mensal}</span>`:'<span style="color:var(--text-tertiary)">—</span>'}</td>
+      <td><button class="btn-sm" onclick="openEditAna('${a.id}','${a.name}',${a.meta_mensal||0})"><i class="ti ti-edit"></i></button>
       <button class="btn-sm" onclick="togAna('${a.id}',${a.ativo})">${a.ativo?'Desativar':'Ativar'}</button></td></tr>`;
     }).join('')}</tbody></table></div>
   </div>`);}
@@ -1122,10 +1123,11 @@ async function saveAna(){
   closeModal();pgAna();
 }
 
-function openEditAna(id,nome){showModal(`<h3><i class="ti ti-edit" style="color:var(--blue)"></i> Editar Analista</h3>
+function openEditAna(id,nome,meta){showModal(`<h3><i class="ti ti-edit" style="color:var(--blue)"></i> Editar Analista</h3>
 <div class="form-grid">
   <div class="form-group full"><label>Nome</label><input id="aNE" value="${nome}"></div>
   <div class="form-group full"><label>Nova Senha <span style="color:var(--text-tertiary)">(vazio = manter)</span></label><input type="password" id="aSE" placeholder="nova senha"></div>
+  <div class="form-group full"><label>Meta Mensal <span style="color:var(--text-tertiary)">(processos/mês — 0 = sem meta)</span></label><input type="number" id="aME" value="${meta||0}" min="0" step="1"></div>
 </div>
 <div class="modal-footer">
   <button class="btn-sec" onclick="closeModal()">Cancelar</button>
@@ -1134,7 +1136,9 @@ function openEditAna(id,nome){showModal(`<h3><i class="ti ti-edit" style="color:
 
 async function saveEditAna(id){
   const upd={};const nome=document.getElementById('aNE').value.trim(),pass=document.getElementById('aSE').value.trim();
-  if(nome)upd.name=nome;if(pass)upd.pass=pass;if(!Object.keys(upd).length){closeModal();return;}
+  const meta=parseInt(document.getElementById('aME').value||'0');
+  if(nome)upd.name=nome;if(pass)upd.pass=pass;upd.meta_mensal=isNaN(meta)?0:meta;
+  if(!Object.keys(upd).length){closeModal();return;}
   const btn=document.getElementById('bEA');btn.disabled=true;btn.textContent='Salvando...';
   const{error}=await sb.from('analistas').update(upd).eq('id',id);
   if(error){btn.disabled=false;btn.textContent='Salvar';alert('Erro: '+error.message);return;}
@@ -1210,6 +1214,9 @@ async function pgFila(){
   const concMes=conc.filter(p=>p.data_julgamento&&p.data_julgamento.startsWith(mesAtual));
   const dArr=conc.filter(p=>p.data_julgamento&&p.data_atribuicao).map(p=>Math.round((new Date(p.data_julgamento)-new Date(p.data_atribuicao))/86400000)).filter(d=>d>=0);
   const media=dArr.length?Math.round(dArr.reduce((s,d)=>s+d,0)/dArr.length):null;
+  const meta=analistas.find(a=>a.id===currentUser.id)?.meta_mensal||0;
+  const pctMeta=meta?Math.min(100,Math.round(concMes.length/meta*100)):null;
+  const metaColor=pctMeta===null?'var(--blue)':pctMeta>=100?'#1A7A4A':pctMeta>=60?'var(--blue)':'#E05C00';
   setC(`<div class="card">
     <div class="card-header"><div class="card-title"><i class="ti ti-checklist"></i> Minha Fila — ${currentUser.name}</div></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
@@ -1222,8 +1229,9 @@ async function pgFila(){
         <div style="font-size:26px;font-weight:700;color:#1A7A4A">${conc.length}</div>
       </div>
       <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:14px;text-align:center">
-        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Este mês</div>
-        <div style="font-size:26px;font-weight:700;color:var(--blue)">${concMes.length}</div>
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Este mês${meta?` / meta`:''}</div>
+        <div style="font-size:26px;font-weight:700;color:${metaColor}">${concMes.length}${meta?`<span style="font-size:14px;font-weight:400;color:var(--text-tertiary)">/${meta}</span>`:''}</div>
+        ${pctMeta!=null?`<div style="margin-top:6px;background:var(--bg-primary);border-radius:4px;height:5px;overflow:hidden"><div style="width:${pctMeta}%;height:100%;background:${metaColor};border-radius:4px"></div></div>`:``}
       </div>
       <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:14px;text-align:center">
         <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Média (dias)</div>
@@ -1888,10 +1896,12 @@ async function pgProdutividade(){
     _allProc=r.data||[];
   }
   const anas=analistas.filter(a=>a.ativo);
+  const mesAtual=new Date().toISOString().slice(0,7);
   function calcM(anaId){
     const ps=_allProc.filter(p=>p.analista_id===anaId);
     const emFila=ps.filter(p=>p.situacao==='em_julgamento');
     const conc=ps.filter(p=>['multa','arquivado','julgado','aguardando_correcao'].includes(p.situacao));
+    const concMes=conc.filter(p=>p.data_julgamento&&p.data_julgamento.startsWith(mesAtual));
     const par=emFila.filter(p=>isAtr(p));
     const multas=ps.filter(p=>p.situacao==='multa'||p.resultado_analista==='multa');
     const valMul=multas.reduce((s,p)=>s+parseFloat(p.valor||0),0);
@@ -1899,14 +1909,24 @@ async function pgProdutividade(){
       .map(p=>Math.round((new Date(p.data_julgamento)-new Date(p.data_atribuicao))/86400000))
       .filter(d=>d>=0);
     const media=dArr.length?Math.round(dArr.reduce((s,d)=>s+d,0)/dArr.length):null;
-    return{total:ps.length,emFila:emFila.length,conc:conc.length,par:par.length,multas:multas.length,valMul,media};
+    return{total:ps.length,emFila:emFila.length,conc:conc.length,concMes:concMes.length,par:par.length,multas:multas.length,valMul,media};
   }
   const rows=anas.map(a=>({a,m:calcM(a.id)})).sort((x,y)=>y.m.total-x.m.total);
   const totEmFila=_allProc.filter(p=>p.situacao==='em_julgamento').length;
   const totConc=_allProc.filter(p=>['multa','arquivado','julgado'].includes(p.situacao)).length;
   const totPar=_allProc.filter(p=>isAtr(p)).length;
   const totVal=_allProc.filter(p=>p.situacao==='multa').reduce((s,p)=>s+parseFloat(p.valor||0),0);
-  const tblRows=rows.map(({a,m})=>`<tr>
+  const tblRows=rows.map(({a,m})=>{
+    const meta=a.meta_mensal||0;
+    const pct=meta?Math.min(100,Math.round(m.concMes/meta*100)):null;
+    const barColor=pct===null?'':pct>=100?'#1A7A4A':pct>=60?'#185FA5':'#E05C00';
+    const progressCell=meta?`<div style="display:flex;align-items:center;gap:7px">
+      <div style="flex:1;background:var(--bg-primary);border-radius:4px;height:7px;overflow:hidden;min-width:60px">
+        <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px"></div>
+      </div>
+      <span style="font-size:11px;white-space:nowrap;color:${barColor};font-weight:600">${m.concMes}/${meta}</span>
+    </div>`:`<span style="color:var(--text-tertiary);font-size:12px">${m.concMes||'—'}</span>`;
+    return`<tr>
     <td style="font-weight:600">${escHist(a.name)}</td>
     <td style="text-align:center">${m.total||'—'}</td>
     <td style="text-align:center">${m.emFila||'—'}</td>
@@ -1915,7 +1935,8 @@ async function pgProdutividade(){
     <td style="text-align:center">${m.multas||'—'}</td>
     <td style="text-align:right;font-size:12px">${m.valMul?fmtM(m.valMul):'—'}</td>
     <td style="text-align:center">${m.media!=null?m.media+'d':'—'}</td>
-  </tr>`).join('');
+    <td style="min-width:130px">${progressCell}</td>
+  </tr>`;}).join('');
   setC(`<div class="card">
   <div class="card-header"><div class="card-title"><i class="ti ti-chart-bar"></i> Produtividade dos Analistas</div></div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
@@ -1950,6 +1971,7 @@ async function pgProdutividade(){
       <th style="text-align:center">Multas</th>
       <th style="text-align:right">Valor Multas</th>
       <th style="text-align:center">Média (dias)</th>
+      <th>Meta/mês</th>
     </tr></thead>
     <tbody>${tblRows}</tbody>
   </table></div>
