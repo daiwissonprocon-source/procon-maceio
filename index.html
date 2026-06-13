@@ -511,9 +511,24 @@ function showPage(page){
 let _dashCharts=[];
 function destroyCharts(){_dashCharts.forEach(c=>{try{c.destroy();}catch(e){}});_dashCharts=[];}
 
+/* Busca todas as linhas de uma tabela contornando o limite de 1000 do Supabase.
+   Uso: await _fetchAll(()=> sb.from('processos').select('*').eq('situacao','pendente')) */
+async function _fetchAll(qFn){
+  var all=[],pos=0,chunk=1000;
+  while(true){
+    var res=await qFn().range(pos,pos+chunk-1);
+    if(res.error)return res;
+    if(!res.data||res.data.length===0)break;
+    all=all.concat(res.data);
+    if(res.data.length<chunk)break;
+    pos+=chunk;
+  }
+  return {data:all,error:null};
+}
+
 async function pgDash(){
   ldg('Carregando dashboard...');
-  const{data:ps,error}=await sb.from('processos').select('*');
+  const{data:ps,error}=await _fetchAll(()=>sb.from('processos').select('*'));
   if(error){dbErr(error);return;}
 
   const tot=ps.length,
@@ -723,7 +738,7 @@ async function pgDash(){
 let _allProc=[];
 async function pgProc(){
   ldg('Carregando processos...');
-  const{data,error}=await sb.from('processos').select('*').order('data_abertura',{ascending:false});
+  const{data,error}=await _fetchAll(()=>sb.from('processos').select('*').order('data_abertura',{ascending:false}));
   if(error){dbErr(error);return;}
   _allProc=data;
   renderProcPage(data);
@@ -892,7 +907,7 @@ async function pgAna(){
   const{data,error}=await sb.from('analistas').select('*').order('name');
   if(error){dbErr(error);return;}
   analistas=data;
-  const{data:ps}=await sb.from('processos').select('analista_id,situacao');
+  const{data:ps}=await _fetchAll(()=>sb.from('processos').select('analista_id,situacao'));
   setC(`<div class="card">
     <div class="card-header"><div class="card-title">Analistas Cadastrados</div>
     <button class="btn-blue-sm" onclick="openAddAna()"><i class="ti ti-user-plus"></i> Novo Analista</button></div>
@@ -952,7 +967,7 @@ async function togAna(id,ativo){const{error}=await sb.from('analistas').update({
 /* ATRIBUIR */
 async function pgAtrib(){
   ldg('Carregando processos pendentes...');
-  const{data,error}=await sb.from('processos').select('*').eq('situacao','pendente').order('data_abertura');
+  const{data,error}=await _fetchAll(()=>sb.from('processos').select('*').eq('situacao','pendente').order('data_abertura'));
   if(error){dbErr(error);return;}
   const atv=analistas.filter(a=>a.ativo);
   setC(`<div class="card">
@@ -1231,7 +1246,7 @@ async function saveJulg(){
 let _editProcs=[];
 async function pgEdicao(){
   ldg('Carregando processos para edição...');
-  const{data,error}=await sb.from('processos').select('*').order('data_abertura',{ascending:false});
+  const{data,error}=await _fetchAll(()=>sb.from('processos').select('*').order('data_abertura',{ascending:false}));
   if(error){dbErr(error);return;}
   _editProcs=data;
   renderEdicao(data);
@@ -1836,7 +1851,7 @@ async function executarImportacao(){
   const btn=document.getElementById('btnExecImp');if(btn)btn.disabled=true;
   const val=(r,campo)=>mapa[campo]!==undefined?(r[mapa[campo]]||''):'';
 
-  const{data:ex}=await sb.from('processos').select('numero');
+  const{data:ex}=await _fetchAll(()=>sb.from('processos').select('numero'));
   const exN=new Set((ex||[]).map(p=>p.numero));
   const ins=[];let skip=0;
   rows.forEach(r=>{
@@ -1916,7 +1931,7 @@ async function doImportLegado(input){
       }
     }catch(err){document.getElementById('impRes').innerHTML=`<div class="alert alert-error" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Erro ao ler: ${err.message}</div>`;return;}
 
-    const{data:ex}=await sb.from('processos').select('numero');
+    const{data:ex}=await _fetchAll(()=>sb.from('processos').select('numero'));
     const exN=new Set((ex||[]).map(p=>p.numero));
     const ins=[];let skip=0;
 
@@ -1990,10 +2005,12 @@ async function gerarRel(tipo){
   const ana=document.getElementById('rAna').value,forn=(document.getElementById('rForn').value||'').toLowerCase(),sit=document.getElementById('rSit').value;
   document.getElementById('bRH').disabled=true;document.getElementById('bRP').disabled=true;
   document.getElementById('relRes').innerHTML=`<div class="alert alert-info" style="margin-top:12px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Buscando dados...</div>`;
-  let q=sb.from('processos').select('*').order('data_abertura',{ascending:false});
-  if(de)q=q.gte('data_abertura',de);if(ate)q=q.lte('data_abertura',ate);
-  if(ana)q=q.eq('analista_id',ana);if(sit)q=q.eq('situacao',sit);
-  const{data,error}=await q;
+  const{data,error}=await _fetchAll(function(){
+    let q=sb.from('processos').select('*').order('data_abertura',{ascending:false});
+    if(de)q=q.gte('data_abertura',de);if(ate)q=q.lte('data_abertura',ate);
+    if(ana)q=q.eq('analista_id',ana);if(sit)q=q.eq('situacao',sit);
+    return q;
+  });
   document.getElementById('bRH').disabled=false;document.getElementById('bRP').disabled=false;
   if(error){document.getElementById('relRes').innerHTML=`<div class="alert alert-error" style="margin-top:12px"><i class="ti ti-alert-circle"></i>Erro: ${error.message}</div>`;return;}
   const list=forn?data.filter(p=>p.fornecedor.toLowerCase().includes(forn)):data;
