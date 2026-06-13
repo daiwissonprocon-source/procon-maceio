@@ -1006,11 +1006,27 @@ async function exportarPdfProcesso(id){
   const p=_allProc.find(x=>x.id===id);
   if(!p)return;
   const anaNome=analistas.find(x=>x.id===p.analista_id)?.name||'—';
-  const res=await sb.from('andamentos').select('*').eq('processo_id',id).order('created_at');
+  const [res,resMsg]=await Promise.all([
+    sb.from('andamentos').select('*').eq('processo_id',id).order('created_at'),
+    sb.from('mensagens').select('*').eq('processo_id',id).order('created_at'),
+  ]);
   const ands=res.data||[];
+  const msgs=resMsg.data||[];
   const tipoLabel={andamento:'Andamento',ato:'Ato',pedido:'Pedido'};
   const sitLabel={pendente:'Pendente',em_julgamento:'Em Julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguardando Correção',julgado:'Julgado'};
   const d=diasAtr(p);
+  const msgHtml=msgs.length?msgs.map(m=>{
+    const dt=new Date(m.created_at).toLocaleString('pt-BR');
+    const role=m.autor_role==='admin'?'Admin':'Analista';
+    return`<div style="border:1px solid #ddd;border-radius:6px;padding:9px 12px;margin-bottom:7px;background:${m.autor_role==='admin'?'#f0f4ff':'#f8f9fa'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-weight:700;font-size:11px;color:${m.autor_role==='admin'?'#185FA5':'#444'}">${escHist(m.autor_nome||role)} <span style="font-weight:400;color:#888">(${role})</span></span>
+        <span style="font-size:11px;color:#777">${dt}</span>
+      </div>
+      ${m.texto?`<div style="white-space:pre-wrap;line-height:1.5">${escHist(m.texto)}</div>`:''}
+      ${m.arquivo_url?`<div style="margin-top:5px;font-size:11px"><a href="${m.arquivo_url}">${escHist(m.arquivo_nome||'Anexo')}</a></div>`:''}
+    </div>`;
+  }).join(''):'<p style="color:#999;font-style:italic">Nenhuma mensagem no chat.</p>';
   const andHtml=ands.length?ands.map(a=>`
     <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;background:${a.tipo==='pedido'?'#fff8f0':'#f8f9fa'}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -1071,6 +1087,10 @@ ${(p.anexo_decisao_url||p.anexo_multa_url||p.anexo_dosimetria_url)?`<div class="
 <div class="sec">
   <div class="sec-title">Histórico de Andamentos (${ands.length})</div>
   ${andHtml}
+</div>
+<div class="sec">
+  <div class="sec-title">Mensagens do Chat (${msgs.length})</div>
+  ${msgHtml}
 </div>
 <div class="no-print" style="text-align:center;margin-top:24px">
   <button onclick="window.print()" style="padding:8px 22px;background:#185FA5;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Imprimir / Salvar PDF</button>
