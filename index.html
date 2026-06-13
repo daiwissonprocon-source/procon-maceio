@@ -1206,8 +1206,30 @@ async function pgFila(){
   const conc=r2.data||[],atr=_fila.filter(p=>isAtr(p));
   const bFila=document.getElementById('badgeAtrasoFila');
   if(bFila){bFila.textContent=atr.length;bFila.classList.toggle('hidden',atr.length===0);}
+  const mesAtual=new Date().toISOString().slice(0,7);
+  const concMes=conc.filter(p=>p.data_julgamento&&p.data_julgamento.startsWith(mesAtual));
+  const dArr=conc.filter(p=>p.data_julgamento&&p.data_atribuicao).map(p=>Math.round((new Date(p.data_julgamento)-new Date(p.data_atribuicao))/86400000)).filter(d=>d>=0);
+  const media=dArr.length?Math.round(dArr.reduce((s,d)=>s+d,0)/dArr.length):null;
   setC(`<div class="card">
     <div class="card-header"><div class="card-title"><i class="ti ti-checklist"></i> Minha Fila — ${currentUser.name}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Em Fila</div>
+        <div style="font-size:26px;font-weight:700;color:#E05C00">${_fila.length}</div>
+      </div>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Concluídos (total)</div>
+        <div style="font-size:26px;font-weight:700;color:#1A7A4A">${conc.length}</div>
+      </div>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Este mês</div>
+        <div style="font-size:26px;font-weight:700;color:var(--blue)">${concMes.length}</div>
+      </div>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Média (dias)</div>
+        <div style="font-size:26px;font-weight:700;color:${media!=null&&media>30?'var(--red)':media!=null?'var(--text-primary)':'var(--text-tertiary)'}">${media!=null?media+'d':'—'}</div>
+      </div>
+    </div>
     ${atr.length?`<div class="alert alert-warn"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><div><strong>${atr.length} processo(s) parado(s) sem julgamento:</strong> ${atr.map(p=>`${p.numero} <span style="color:var(--red);font-size:11px">(${diasAtr(p)}d)</span>`).join(', ')}</div></div>`:''}
     <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Clique em <strong>Julgar</strong> para registrar o resultado.</div>
     <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Atribuição</th><th>Status</th><th>Ação</th></tr></thead>
