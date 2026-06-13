@@ -402,21 +402,33 @@ function _marcarVinculados(){
   document.querySelectorAll('table').forEach(function(table){
     var tbody=table.querySelector('tbody');if(!tbody)return;
     var rows=Array.from(tbody.querySelectorAll(':scope > tr'));
+    // Detecta coluna do número do processo (cabeçalho "processo" ou padrão NN.NN.)
+    var numCol=0;
+    var thead=table.querySelector('thead');
+    var abCol=-1;
+    if(thead){
+      var ths=Array.from(thead.querySelectorAll('th'));
+      var hi=ths.findIndex(function(h){return /processo/i.test(h.textContent);});
+      if(hi>=0)numCol=hi;
+      abCol=ths.findIndex(function(h){return /abertura/i.test(h.textContent);});
+    }
+    if(rows.length>0){
+      // Confirma pela detecção de conteúdo (formato NN.NN.) — cobre tabelas sem cabeçalho claro
+      for(var ci2=0;ci2<rows[0].cells.length;ci2++){
+        if(/^\d{2}\.\d{2}\./.test(rows[0].cells[ci2].textContent.trim())){numCol=ci2;break;}
+      }
+    }
     // Limpa marcações anteriores
     rows.forEach(function(tr){
       tr.removeAttribute('title');
-      var c=tr.cells[0];if(!c)return;
+      var c=tr.cells[numCol];if(!c)return;
       c.classList.remove('vin-s','vin-m','vin-e');
       c.style.removeProperty('--vc');
     });
-    // Encontra coluna de Abertura pelo cabeçalho
-    var thead=table.querySelector('thead');
-    var abCol=-1;
-    if(thead){var ths=Array.from(thead.querySelectorAll('th'));abCol=ths.findIndex(function(h){return /abertura/i.test(h.textContent);});}
     // Monta mapa radical → linhas
     var grupos=new Map();
     rows.forEach(function(tr){
-      var c=tr.cells[0];if(!c)return;
+      var c=tr.cells[numCol];if(!c)return;
       var rad=c.textContent.trim().split(/\s/)[0].replace(/\d{2}$/, '');
       if(rad.length<5)return;
       if(!grupos.has(rad))grupos.set(rad,[]);
@@ -424,7 +436,6 @@ function _marcarVinculados(){
     });
     // Ordena por padrão (só se o usuário ainda não clicou em nenhum cabeçalho)
     if(!table.getAttribute('data-sort-col')){
-      // data mínima de abertura por radical (para ordenar os grupos cronologicamente)
       var radData=new Map();
       grupos.forEach(function(grp,rad){
         var min=99999999;
@@ -436,38 +447,34 @@ function _marcarVinculados(){
         radData.set(rad,min);
       });
       rows.sort(function(ra,rb){
-        var na=(ra.cells[0]||{}).textContent.trim().split(/\s/)[0]||'';
-        var nb=(rb.cells[0]||{}).textContent.trim().split(/\s/)[0]||'';
+        var na=(ra.cells[numCol]||{}).textContent.trim().split(/\s/)[0]||'';
+        var nb=(rb.cells[numCol]||{}).textContent.trim().split(/\s/)[0]||'';
         var radA=na.replace(/\d{2}$/, ''), radB=nb.replace(/\d{2}$/, '');
         var seqA=na.slice(-2), seqB=nb.slice(-2);
-        // 1º critério: data mínima do grupo (cronológico)
         var mA=radData.get(radA)||99999999, mB=radData.get(radB)||99999999;
         if(mA!==mB)return mA-mB;
-        // 2º critério: radical (mantém mesmo grupo junto quando datas iguais)
         var rc=radA.localeCompare(radB,'pt');
         if(rc!==0)return rc;
-        // 3º critério: sequência (-301 antes de -302)
         return seqA.localeCompare(seqB);
       });
       rows.forEach(function(r){tbody.appendChild(r);});
     }
-    // Recolhe ordem atual após possível sort
+    // Recolhe ordem atual e desenha colchetes
     var ordered=Array.from(tbody.querySelectorAll(':scope > tr'));
     var gruposOrdenados=new Map();
     ordered.forEach(function(tr){
-      var c=tr.cells[0];if(!c)return;
+      var c=tr.cells[numCol];if(!c)return;
       var rad=c.textContent.trim().split(/\s/)[0].replace(/\d{2}$/, '');
       if(rad.length<5)return;
       if(!gruposOrdenados.has(rad))gruposOrdenados.set(rad,[]);
       gruposOrdenados.get(rad).push(tr);
     });
-    // Desenha colchetes
     var ci=0;
     gruposOrdenados.forEach(function(grp){
       if(grp.length<2)return;
       var cor=VIN_CORES[ci++%VIN_CORES.length];
       grp.forEach(function(tr,idx){
-        var c=tr.cells[0];if(!c)return;
+        var c=tr.cells[numCol];if(!c)return;
         var cls=idx===0?'vin-s':(idx===grp.length-1?'vin-e':'vin-m');
         c.classList.add(cls);
         c.style.setProperty('--vc',cor);
