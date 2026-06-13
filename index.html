@@ -381,6 +381,66 @@ document.addEventListener('click',function(ev){
   const ind=document.createElement('span');ind.className='sort-ind';ind.textContent=dir==='asc'?'▲':'▼';
   th.appendChild(ind);
 });
+/* ═══════════════════════════════════════════════════
+   VINCULAÇÃO VISUAL DE PROCESSOS (mesmo radical)
+   Desenha colchete ┌─ ├─ └─ antes do número do
+   processo quando há dois ou mais com mesmo radical.
+   Ex: 24.12.0003.004.00139-301 e -302 ficam ligados.
+═══════════════════════════════════════════════════ */
+var VIN_CORES=['#e67e22','#3498db','#2ecc71','#9b59b6','#1abc9c','#e74c3c','#f1c40f','#16a085','#e91e63','#00bcd4'];
+(function(){
+  var st=document.createElement('style');
+  st.textContent=
+    'td.vin-s,td.vin-m,td.vin-e{position:relative;padding-left:22px!important;overflow:visible!important;}'+
+    'td.vin-s::before,td.vin-m::before,td.vin-e::before{content:"";position:absolute;left:8px;top:-1px;bottom:-1px;width:0;border-left:2px solid var(--vc,#888);}'+
+    'td.vin-s::before{top:50%;}'+        /* linha desce do centro p/ baixo */
+    'td.vin-e::before{bottom:50%;}'+     /* linha sobe do centro p/ cima  */
+    'td.vin-s::after,td.vin-m::after,td.vin-e::after{content:"";position:absolute;left:8px;top:calc(50% - 1px);width:9px;height:0;border-top:2px solid var(--vc,#888);}';
+  document.head.appendChild(st);
+})();
+function _marcarVinculados(){
+  document.querySelectorAll('table').forEach(function(table){
+    var tbody=table.querySelector('tbody');if(!tbody)return;
+    var rows=Array.from(tbody.querySelectorAll(':scope > tr'));
+    rows.forEach(function(tr){
+      tr.removeAttribute('title');
+      var c=tr.cells[0];if(!c)return;
+      c.classList.remove('vin-s','vin-m','vin-e');
+      c.style.removeProperty('--vc');
+    });
+    var grupos=new Map();
+    rows.forEach(function(tr){
+      var c=tr.cells[0];if(!c)return;
+      var rad=c.textContent.trim().split(/\s/)[0].replace(/\d{2}$/, '');
+      if(rad.length<5)return;
+      if(!grupos.has(rad))grupos.set(rad,[]);
+      grupos.get(rad).push(tr);
+    });
+    var ci=0;
+    grupos.forEach(function(grp){
+      if(grp.length<2)return;
+      var cor=VIN_CORES[ci++%VIN_CORES.length];
+      grp.forEach(function(tr,idx){
+        var c=tr.cells[0];if(!c)return;
+        var cls=idx===0?'vin-s':(idx===grp.length-1?'vin-e':'vin-m');
+        c.classList.add(cls);
+        c.style.setProperty('--vc',cor);
+        if(idx===0)tr.title='Processos vinculados ('+grp.length+' fornecedores com mesmo radical)';
+      });
+    });
+  });
+}
+(function(){
+  var _vt;
+  var obs=new MutationObserver(function(){clearTimeout(_vt);_vt=setTimeout(_marcarVinculados,200);});
+  function _tryObs(){
+    var mc=document.getElementById('mainContent');
+    if(mc){obs.observe(mc,{childList:true,subtree:true});}
+    else{setTimeout(_tryObs,150);}
+  }
+  _tryObs();
+})();
+
 function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_atribuicao)return false;return(Date.now()-new Date(p.data_atribuicao))/86400000>3;}
 function getANome(id){if(!id)return '<span style="color:var(--text-tertiary)">—</span>';const a=analistas.find(x=>x.id===id);return a?a.name:'—';}
 function getBadge(s){const c={pendente:'badge-pending',em_julgamento:'badge-inprogress',multa:'badge-multa',arquivado:'badge-arquivado',aguardando_correcao:'badge-correcao',julgado:'badge-julgado'};const l={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguard. Correção',julgado:'Julgado'};return`<span class="badge ${c[s]||''}">${l[s]||s}</span>`;}
