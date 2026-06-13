@@ -1453,8 +1453,58 @@ function pgImp(){setC(`<div class="card">
       <div style="margin-top:6px;font-size:11px;color:var(--text-secondary)">Colunas opcionais: <code>analista</code> <code>valor</code> <code>motivoArquivamento</code></div>
     </div>
   </div>
+
+  <div class="card" style="margin-top:16px;margin-bottom:0">
+    <div class="card-title" style="font-size:14px;margin-bottom:4px"><i class="ti ti-clipboard-check" style="color:var(--green)"></i> Padrão para importar sem erros</div>
+    <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Use exatamente os nomes de coluna abaixo no cabeçalho da 1ª linha (Excel ou CSV). Maiúsculas/minúsculas importam — escreva igualzinho.</div>
+    <div class="table-wrap">
+      <table style="font-size:12px">
+        <thead><tr><th>Coluna (cabeçalho)</th><th>Obrigatória?</th><th>Formato / valores aceitos</th><th>Exemplo</th></tr></thead>
+        <tbody>
+          <tr><td><code>numero</code></td><td><span class="badge badge-multa">Sim</span></td><td>Texto. Cada número deve ser único (não repetir).</td><td>20.07.0003.001.00012-301</td></tr>
+          <tr><td><code>fornecedor</code></td><td>Recomendada</td><td>Texto. Se vazio, vira "A preencher".</td><td>Empresa XPTO Ltda</td></tr>
+          <tr><td><code>tema</code></td><td>Recomendada</td><td>Texto. Se vazio, vira "A preencher".</td><td>Cobrança indevida</td></tr>
+          <tr><td><code>dataAbertura</code></td><td>Opcional</td><td>Data no formato <strong>AAAA-MM-DD</strong>. Se vazio, é extraída do número ou usa a data de hoje.</td><td>2024-03-15</td></tr>
+          <tr><td><code>situacao</code></td><td>Opcional</td><td>Só estes 4 valores: <code>pendente</code>, <code>em_julgamento</code>, <code>multa</code>, <code>arquivado</code>. Outro valor vira "pendente".</td><td>pendente</td></tr>
+          <tr><td><code>analista</code></td><td>Opcional</td><td>O <strong>login</strong> do analista (não o nome). Em branco = sem analista.</td><td>analista1</td></tr>
+          <tr><td><code>valor</code></td><td>Opcional</td><td>Número. Use <strong>ponto</strong> para centavos, sem "R$" e sem ponto de milhar.</td><td>1500.00</td></tr>
+          <tr><td><code>motivoArquivamento</code></td><td>Opcional</td><td>Texto livre.</td><td>Acordo entre as partes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="alert alert-warn" style="margin-top:14px;align-items:flex-start">
+      <i class="ti ti-alert-triangle" style="flex-shrink:0;margin-top:2px"></i>
+      <div>
+        <strong>Regras para não dar erro:</strong>
+        <ul style="margin:6px 0 0 18px;line-height:1.85">
+          <li>A coluna <code>numero</code> é a única obrigatória — sem ela a linha é ignorada.</li>
+          <li>Processos com <code>numero</code> já cadastrado são <strong>ignorados</strong> (não duplica e não sobrescreve).</li>
+          <li>Datas sempre no formato <strong>AAAA-MM-DD</strong> (ex.: 2024-03-15). Outros formatos podem ser ignorados.</li>
+          <li><code>situacao</code> deve ser exatamente um dos 4 valores listados (em minúsculas, com "_").</li>
+          <li>Em <code>analista</code> use o <strong>login</strong> (ex.: analista1), não o nome completo.</li>
+          <li>No Excel, mantenha tudo na <strong>1ª aba</strong> da planilha.</li>
+          <li>Se exportar do Notion: exporte como <strong>CSV</strong> e renomeie os cabeçalhos para os nomes desta tabela.</li>
+        </ul>
+      </div>
+    </div>
+    <button class="btn btn-secondary" style="margin-top:12px" onclick="baixarModeloImport()"><i class="ti ti-file-download"></i> Baixar modelo (CSV)</button>
+  </div>
+
   <div id="impRes"></div>
 </div>`);}
+
+// Gera e baixa um arquivo CSV modelo já com os cabeçalhos no padrão correto
+function baixarModeloImport(){
+  const cabecalho='numero,fornecedor,tema,dataAbertura,situacao,analista,valor,motivoArquivamento';
+  const exemplo='20.07.0003.001.00012-301,Empresa XPTO Ltda,Cobrança indevida,2024-03-15,pendente,analista1,1500.00,';
+  const csv='﻿'+cabecalho+'\n'+exemplo+'\n';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='modelo-importacao-processos.csv';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(a.href);
+}
 
 // Extrai data_abertura do padrão AA.MM.XXXX.XXX.NNNNN-NNN
 function extrairDataDoNumero(num){
