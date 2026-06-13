@@ -402,12 +402,18 @@ function _marcarVinculados(){
   document.querySelectorAll('table').forEach(function(table){
     var tbody=table.querySelector('tbody');if(!tbody)return;
     var rows=Array.from(tbody.querySelectorAll(':scope > tr'));
+    // Limpa marcações anteriores
     rows.forEach(function(tr){
       tr.removeAttribute('title');
       var c=tr.cells[0];if(!c)return;
       c.classList.remove('vin-s','vin-m','vin-e');
       c.style.removeProperty('--vc');
     });
+    // Encontra coluna de Abertura pelo cabeçalho
+    var thead=table.querySelector('thead');
+    var abCol=-1;
+    if(thead){var ths=Array.from(thead.querySelectorAll('th'));abCol=ths.findIndex(function(h){return /abertura/i.test(h.textContent);});}
+    // Monta mapa radical → linhas
     var grupos=new Map();
     rows.forEach(function(tr){
       var c=tr.cells[0];if(!c)return;
@@ -416,8 +422,48 @@ function _marcarVinculados(){
       if(!grupos.has(rad))grupos.set(rad,[]);
       grupos.get(rad).push(tr);
     });
+    // Ordena por padrão (só se o usuário ainda não clicou em nenhum cabeçalho)
+    if(!table.getAttribute('data-sort-col')){
+      // data mínima de abertura por radical (para ordenar os grupos cronologicamente)
+      var radData=new Map();
+      grupos.forEach(function(grp,rad){
+        var min=99999999;
+        grp.forEach(function(tr){
+          if(abCol<0)return;
+          var dv=_sortVal((tr.cells[abCol]||{}).textContent||'');
+          if(dv.t===0&&dv.v<min)min=dv.v;
+        });
+        radData.set(rad,min);
+      });
+      rows.sort(function(ra,rb){
+        var na=(ra.cells[0]||{}).textContent.trim().split(/\s/)[0]||'';
+        var nb=(rb.cells[0]||{}).textContent.trim().split(/\s/)[0]||'';
+        var radA=na.replace(/\d{2}$/, ''), radB=nb.replace(/\d{2}$/, '');
+        var seqA=na.slice(-2), seqB=nb.slice(-2);
+        // 1º critério: data mínima do grupo (cronológico)
+        var mA=radData.get(radA)||99999999, mB=radData.get(radB)||99999999;
+        if(mA!==mB)return mA-mB;
+        // 2º critério: radical (mantém mesmo grupo junto quando datas iguais)
+        var rc=radA.localeCompare(radB,'pt');
+        if(rc!==0)return rc;
+        // 3º critério: sequência (-301 antes de -302)
+        return seqA.localeCompare(seqB);
+      });
+      rows.forEach(function(r){tbody.appendChild(r);});
+    }
+    // Recolhe ordem atual após possível sort
+    var ordered=Array.from(tbody.querySelectorAll(':scope > tr'));
+    var gruposOrdenados=new Map();
+    ordered.forEach(function(tr){
+      var c=tr.cells[0];if(!c)return;
+      var rad=c.textContent.trim().split(/\s/)[0].replace(/\d{2}$/, '');
+      if(rad.length<5)return;
+      if(!gruposOrdenados.has(rad))gruposOrdenados.set(rad,[]);
+      gruposOrdenados.get(rad).push(tr);
+    });
+    // Desenha colchetes
     var ci=0;
-    grupos.forEach(function(grp){
+    gruposOrdenados.forEach(function(grp){
       if(grp.length<2)return;
       var cor=VIN_CORES[ci++%VIN_CORES.length];
       grp.forEach(function(tr,idx){
