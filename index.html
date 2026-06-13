@@ -76,6 +76,8 @@
   .badge-arquivado{background:var(--green-light);color:var(--green)}
   .badge-atrasado{background:#FAECE7;color:#993C1D}
   .badge-recurso{background:#EDE9FE;color:#5B21B6;font-weight:700}
+  .badge-nao-iniciado{background:var(--bg-secondary);color:var(--text-tertiary)}
+  .badge-em-analise{background:#E0F2FE;color:#0369A1}
   .btn-sec{background:var(--bg-secondary);border:1px solid var(--border-strong);border-radius:var(--radius-md);padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text-primary)}
   .btn-sec:hover{background:var(--bg-tertiary)}
   .btn-danger{background:var(--red-light);border:1px solid var(--red-mid);color:var(--red);border-radius:var(--radius-md);padding:6px 12px;cursor:pointer;font-size:12px}
@@ -566,9 +568,11 @@ function _marcarVinculados(){
   _tryObs();
 })();
 
-function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_atribuicao)return false;return(Date.now()-new Date(p.data_atribuicao))/86400000>3;}
-function diasAtr(p){if(!isAtr(p))return 0;return Math.floor((Date.now()-new Date(p.data_atribuicao))/86400000);}
-function badgeAtr(p){const d=diasAtr(p);return d?`<span class="badge badge-atrasado">⚠ Atrasado (${d}d)</span>`:'';}
+function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_inicio_analise)return false;return(Date.now()-new Date(p.data_inicio_analise))/3600000>48;}
+function diasAtr(p){if(!isAtr(p))return 0;return Math.floor((Date.now()-new Date(p.data_inicio_analise))/86400000);}
+function horasAtr(p){if(!p.data_inicio_analise)return 0;return Math.floor((Date.now()-new Date(p.data_inicio_analise))/3600000);}
+function badgeAtr(p){if(!isAtr(p))return '';const h=horasAtr(p);const txt=h<72?`${h}h`:`${Math.floor(h/24)}d`;return`<span class="badge badge-atrasado">⚠ Atrasado (${txt})</span>`;}
+function statusFila(p){if(isAtr(p))return badgeAtr(p);if(p.data_inicio_analise){const h=horasAtr(p);return`<span class="badge badge-em-analise"><i class="ti ti-clock-hour-4"></i> Em análise (${h}h)</span>`;}return'<span class="badge badge-nao-iniciado">Não iniciado</span>';}
 
 function getANome(id){if(!id)return '<span style="color:var(--text-tertiary)">—</span>';const a=analistas.find(x=>x.id===id);return a?a.name:'—';}
 function getBadge(s){const c={pendente:'badge-pending',em_julgamento:'badge-inprogress',multa:'badge-multa',arquivado:'badge-arquivado',aguardando_correcao:'badge-correcao',julgado:'badge-julgado'};const l={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguard. Correção',julgado:'Julgado'};return`<span class="badge ${c[s]||''}">${l[s]||s}</span>`;}
@@ -1319,14 +1323,15 @@ async function pgFila(){
         <div style="font-size:26px;font-weight:700;color:${media!=null&&media>30?'var(--red)':media!=null?'var(--text-primary)':'var(--text-tertiary)'}">${media!=null?media+'d':'—'}</div>
       </div>
     </div>
-    ${atr.length?`<div class="alert alert-warn"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><div><strong>${atr.length} processo(s) parado(s) sem julgamento:</strong> ${atr.map(p=>`${p.numero} <span style="color:var(--red);font-size:11px">(${diasAtr(p)}d)</span>`).join(', ')}</div></div>`:''}
+    ${atr.length?`<div class="alert alert-warn"><i class="ti ti-alert-triangle" style="flex-shrink:0"></i><div><strong>${atr.length} processo(s) parado(s) sem julgamento:</strong> ${atr.map(p=>{const h=horasAtr(p);const txt=h<72?`${h}h`:`${Math.floor(h/24)}d`;return`${p.numero} <span style="color:var(--red);font-size:11px">(${txt})</span>`;}).join(', ')}</div></div>`:''}
     <div class="alert alert-info"><i class="ti ti-info-circle" style="flex-shrink:0"></i>Clique em <strong>Julgar</strong> para registrar o resultado.</div>
     <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Atribuição</th><th>Status</th><th>Ação</th></tr></thead>
     <tbody>${_fila.length?[..._fila].sort((a,b)=>diasAtr(b)-diasAtr(a)).map(p=>`<tr${isAtr(p)?' style="border-left:3px solid var(--red)"':''}>
       <td style="font-weight:600">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td>
       <td>${fmtData(p.data_abertura)}</td><td>${fmtData(p.data_atribuicao)||'—'}</td>
-      <td>${isAtr(p)?badgeAtr(p):'<span class="badge badge-inprogress">Em fila</span>'}</td>
+      <td>${statusFila(p)}</td>
       <td style="display:flex;gap:4px;align-items:center">
+        ${!p.data_inicio_analise?`<button class="btn-sm" style="background:var(--green);color:#fff;border-color:var(--green)" onclick="iniciarAnalise('${p.id}')"><i class="ti ti-player-play"></i> Iniciar</button>`:''}
         <button class="btn-blue-sm" onclick="julgar('${p.id}')"><i class="ti ti-gavel"></i> Julgar</button>
         <button class="btn-sm" onclick="abrirChat('${p.id}','${p.numero}')" title="Mensagens" style="position:relative">
           <i class="ti ti-message-circle"></i>
@@ -1341,6 +1346,18 @@ async function pgFila(){
     <td style="font-size:12px">${p.situacao==='multa'?fmtM(p.valor):(p.motivo_arquivamento||'').slice(0,40)}</td><td><button class="btn-sm" onclick="abrirChat('${p.id}','${p.numero}')" title="Mensagens"><i class="ti ti-message-circle"></i></button></td></tr>`).join('')}
     </tbody></table></div></div>`:''}
   </div>`);}
+
+async function iniciarAnalise(id){
+  const now=new Date().toISOString();
+  const{error}=await sb.from('processos').update({data_inicio_analise:now}).eq('id',id);
+  if(error){alert('Erro ao iniciar análise: '+error.message);return;}
+  const idx=_fila.findIndex(x=>x.id===id);
+  if(idx>=0)_fila[idx].data_inicio_analise=now;
+  const idx2=_allProc.findIndex(x=>x.id===id);
+  if(idx2>=0)_allProc[idx2].data_inicio_analise=now;
+  showToast('Análise iniciada — cronômetro de 48h ativo.','success');
+  pgFila();
+}
 
 function julgar(id){
   const p=_fila.find(x=>x.id===id);
@@ -1501,10 +1518,12 @@ async function saveJulg(){
   btn.innerHTML='<span class="spin-inline"></span> Salvando julgamento...';
 
   // ── Salva julgamento ────────────────────────────────────────────────────────
+  const p2=_fila.find(x=>x.id===id);
   const upd={
     situacao:'aguardando_correcao',
     resultado_analista:r,
     data_julgamento:dt,
+    data_inicio_analise:p2&&p2.data_inicio_analise?undefined:new Date().toISOString(),
     valor:r==='multa'?parseFloat(document.getElementById('jV').value):null,
     motivo_arquivamento:r==='arquivado'?document.getElementById('jM').value.trim():null,
     anexo_decisao_url:dec.url, anexo_decisao_nome:dec.nome, anexo_decisao_tipo:dec.tipo,
@@ -2057,7 +2076,7 @@ async function pgProdutividade(){
     <tbody>${tblRows}</tbody>
   </table></div>
   <div style="margin-top:12px;font-size:11px;color:var(--text-tertiary)">
-    * <strong>Parados</strong>: em julgamento há mais de 30 dias sem decisão &nbsp;|&nbsp;
+    * <strong>Parados</strong>: análise iniciada há mais de 48 horas sem decisão &nbsp;|&nbsp;
     * <strong>Média (dias)</strong>: tempo médio entre atribuição e julgamento
   </div>
 </div>`);}
