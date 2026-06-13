@@ -568,6 +568,17 @@ function _marcarVinculados(){
   _tryObs();
 })();
 
+const _TEMAS=['Cobrança indevida','Produto com defeito','Serviço não prestado','Propaganda enganosa','Cancelamento de contrato','Problemas bancários / financeiros','Plano de saúde','Telecomunicações','Entrega não realizada','Negativa de atendimento','Negativação indevida','Contrato abusivo'];
+function temaSelectHtml(elId,val){
+  const inList=_TEMAS.includes(val);
+  const opts=_TEMAS.map(t=>`<option value="${t}"${t===val?' selected':''}>${t}</option>`).join('');
+  const outroSel=val&&!inList?' selected':'';
+  const outroShow=val&&!inList?'':'display:none';
+  const outroVal=val&&!inList?val:'';
+  return`<select id="${elId}" onchange="onTemaChange('${elId}')"><option value="">— Selecione o tema —</option>${opts}<option value="__outro__"${outroSel}>Outro (digitar)</option></select><input type="text" id="${elId}Outro" placeholder="Descreva o tema..." style="margin-top:5px;${outroShow}" value="${outroVal}">`;
+}
+function onTemaChange(elId){const sel=document.getElementById(elId);const inp=document.getElementById(elId+'Outro');if(inp)inp.style.display=sel&&sel.value==='__outro__'?'':'none';}
+function getTema(elId){const sel=document.getElementById(elId);if(!sel)return'';if(sel.value==='__outro__'){const t=document.getElementById(elId+'Outro');return t?t.value.trim():'';}return sel.value;}
 function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_inicio_analise)return false;return(Date.now()-new Date(p.data_inicio_analise))/3600000>48;}
 function diasAtr(p){if(!isAtr(p))return 0;return Math.floor((Date.now()-new Date(p.data_inicio_analise))/86400000);}
 function horasAtr(p){if(!p.data_inicio_analise)return 0;return Math.floor((Date.now()-new Date(p.data_inicio_analise))/3600000);}
@@ -1111,7 +1122,7 @@ function editP(id){
   showModal(`<h3><i class="ti ti-edit" style="color:var(--blue)"></i> Editar — ${p.numero}</h3>
 <div class="form-grid">
   <div class="form-group full"><label>Fornecedor</label><input id="eForn" value="${p.fornecedor}"></div>
-  <div class="form-group full"><label>Tema</label><input id="eTema" value="${p.tema}"></div>
+  <div class="form-group full"><label>Tema</label>${temaSelectHtml('eTema',p.tema||'')}</div>
   <div class="form-group">
     <label>Analista</label>
     <select id="eAna">
@@ -1148,7 +1159,7 @@ async function saveEdit(id){
   const btn=document.getElementById('bSE');btn.disabled=true;btn.innerHTML='<span class="spin-inline"></span> Salvando...';
   const upd={
     fornecedor:document.getElementById('eForn').value.trim(),
-    tema:document.getElementById('eTema').value.trim(),
+    tema:getTema('eTema'),
     analista_id:document.getElementById('eAna').value||null,
     data_abertura:document.getElementById('eDAb').value||null,
     situacao:sit,
@@ -1169,7 +1180,7 @@ function openAddProc(){showModal(`<h3><i class="ti ti-plus" style="color:var(--b
   <div class="form-group"><label>Nº Processo *</label><input id="pN" placeholder="00000/2024"></div>
   <div class="form-group"><label>Data de Abertura *</label><input type="date" id="pD"></div>
   <div class="form-group full"><label>Fornecedor *</label><input id="pF" placeholder="Nome do fornecedor"></div>
-  <div class="form-group full"><label>Tema / Assunto *</label><input id="pT" placeholder="Ex: Cobrança indevida"></div>
+  <div class="form-group full"><label>Tema / Assunto *</label>${temaSelectHtml('pT','')}</div>
 </div>
 <div class="modal-footer">
   <button class="btn-sec" onclick="closeModal()">Cancelar</button>
@@ -1177,7 +1188,7 @@ function openAddProc(){showModal(`<h3><i class="ti ti-plus" style="color:var(--b
 </div>`);}
 
 async function saveProc(){
-  const num=document.getElementById('pN').value.trim(),dt=document.getElementById('pD').value,forn=document.getElementById('pF').value.trim(),tema=document.getElementById('pT').value.trim();
+  const num=document.getElementById('pN').value.trim(),dt=document.getElementById('pD').value,forn=document.getElementById('pF').value.trim(),tema=getTema('pT');
   if(!num||!dt||!forn||!tema){alert('Preencha todos os campos.');return;}
   const btn=document.getElementById('bSP');btn.disabled=true;btn.textContent='Salvando...';
   const{error}=await sb.from('processos').insert({numero:num,fornecedor:forn,tema,data_abertura:dt});
@@ -1662,7 +1673,7 @@ function abrirEdicaoCompleta(id){
     <div class="form-group"><label>Nº Processo</label><input id="ecNum" value="${p.numero}"></div>
     <div class="form-group"><label>Data de Abertura</label><input type="date" id="ecData" value="${p.data_abertura||''}"></div>
     <div class="form-group full"><label>Fornecedor</label><input id="ecForn" value="${p.fornecedor}"></div>
-    <div class="form-group full"><label>Tema / Assunto</label><input id="ecTema" value="${p.tema}"></div>
+    <div class="form-group full"><label>Tema / Assunto</label>${temaSelectHtml('ecTema',p.tema||'')}</div>
     <div class="form-group">
       <label>Analista Responsável</label>
       <select id="ecAna">
@@ -1720,7 +1731,7 @@ async function salvarEdicaoCompleta(){
   const upd={
     numero:      document.getElementById('ecNum').value.trim(),
     fornecedor:  document.getElementById('ecForn').value.trim(),
-    tema:        document.getElementById('ecTema').value.trim(),
+    tema:        getTema('ecTema'),
     data_abertura: document.getElementById('ecData').value||null,
     analista_id: anaId,
     data_atribuicao: document.getElementById('ecDtAtrib').value||null,
@@ -1862,7 +1873,7 @@ function editarCorrecao(id){
   </div>
   <div class="form-grid">
     <div class="form-group full"><label>Fornecedor</label><input id="ccForn" value="${p.fornecedor}"></div>
-    <div class="form-group full"><label>Tema</label><input id="ccTema" value="${p.tema}"></div>
+    <div class="form-group full"><label>Tema</label>${temaSelectHtml('ccTema',p.tema||'')}</div>
     <div class="form-group full">
       <label>Resultado Final *</label>
       <select id="ccRes" onchange="onCCRes()">
@@ -1905,7 +1916,7 @@ async function salvarCorrecao(){
     em_recurso:pCorr&&pCorr.em_recurso?false:undefined,
     resultado_analista:res,
     fornecedor:document.getElementById('ccForn').value.trim(),
-    tema:document.getElementById('ccTema').value.trim(),
+    tema:getTema('ccTema'),
     valor:res==='multa'?parseFloat(document.getElementById('ccValor').value):null,
     motivo_arquivamento:res==='arquivado'?document.getElementById('ccMotivo').value.trim():null,
     data_julgamento:document.getElementById('ccDt').value,
