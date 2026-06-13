@@ -620,10 +620,13 @@ function verP(id){
     ${p.data_julgamento?`<tr><td>Data Julgamento</td><td>${p.data_julgamento}</td></tr>`:''}
     ${p.data_correcao?`<tr><td>Data Aprovação</td><td>${p.data_correcao}</td></tr>`:''}
     ${p.obs_correcao?`<tr><td>Obs. Correção</td><td style="color:#7B2D8B">${p.obs_correcao}</td></tr>`:''}
+    ${(p.anexo_decisao_url||p.anexo_multa_url)?`<tr><td>Decisão</td><td><a href="${p.anexo_decisao_url||p.anexo_multa_url}" target="_blank" style="color:var(--blue);text-decoration:none"><i class="ti ti-paperclip"></i> ${p.anexo_decisao_nome||p.anexo_multa_nome||'Abrir documento'}</a></td></tr>`:''}
+    ${p.anexo_dosimetria_url?`<tr><td>Dosimetria</td><td><a href="${p.anexo_dosimetria_url}" target="_blank" style="color:var(--blue);text-decoration:none"><i class="ti ti-paperclip"></i> ${p.anexo_dosimetria_nome||'Abrir documento'}</a></td></tr>`:''}
   </table>
 </div>
 <div class="modal-footer">
   ${isAdmin()?`<button class="btn-sec" style="margin-right:auto" data-id="${p.id}" onclick="closeModal();editP(this.dataset.id)"><i class="ti ti-edit"></i> Editar</button>`:''}
+  <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirHistorico(this.dataset.id,this.dataset.num)"><i class="ti ti-history"></i> Histórico</button>
   <button class="btn-sec" data-id="${p.id}" data-num="${p.numero}" onclick="closeModal();abrirChat(this.dataset.id,this.dataset.num)"><i class="ti ti-message-circle"></i> Mensagens</button>
   <button class="btn-primary" style="width:auto" onclick="closeModal()">Fechar</button>
 </div>`);}
@@ -886,21 +889,10 @@ function julgar(id){
     <input type="date" id="jD" value="${new Date().toISOString().slice(0,10)}">
   </div>
   <div class="form-group full" id="jAnexoGrp" style="display:none">
-    <label>Documento da Multa <span style="font-weight:400;color:var(--text-tertiary)">(opcional — .pdf, .doc, .docx)</span></label>
-    <div id="jAnexoZone" onclick="document.getElementById('jAnexoInput').click()"
-      style="border:2px dashed var(--border-strong);border-radius:var(--radius-md);padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--bg-secondary);transition:border-color .15s"
-      onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor='var(--border-strong)'">
-      <i class="ti ti-cloud-upload" style="font-size:22px;flex-shrink:0;color:var(--blue)"></i>
-      <div>
-        <div id="jAnexoLabel" style="font-size:13px;font-weight:500">Clique para selecionar o arquivo</div>
-        <div style="font-size:11px;color:var(--text-tertiary);margin-top:1px">.pdf, .doc ou .docx — máx. 10MB</div>
-      </div>
-      <input type="file" id="jAnexoInput" style="display:none" accept=".pdf,.doc,.docx" onchange="onJulgarAnexo(this)">
-    </div>
-    <div id="jAnexoPreview" style="display:none;margin-top:6px;padding:8px 12px;background:var(--blue-light);border:1px solid var(--blue-mid);border-radius:var(--radius-md);align-items:center;gap:8px">
-      <i class="ti ti-file-check" style="font-size:18px;color:var(--blue);flex-shrink:0"></i>
-      <span id="jAnexoNome" style="font-size:13px;color:var(--blue);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-      <button onclick="limparJulgarAnexo()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;line-height:1;flex-shrink:0" title="Remover">×</button>
+    <label>Documentos da Multa <span style="font-weight:400;color:var(--text-tertiary)">(opcional — .pdf, .doc, .docx — máx. 10MB cada)</span></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${anexoUploadHTML('decisao','Decisão')}
+      ${anexoUploadHTML('dosimetria','Dosimetria')}
     </div>
   </div>
 </div>
@@ -914,25 +906,61 @@ function onJC(){
   document.getElementById('jVG').style.display=r==='multa'?'':'none';
   document.getElementById('jMG').style.display=r==='arquivado'?'':'none';
   document.getElementById('jAnexoGrp').style.display=r==='multa'?'':'none';
-  if(r!=='multa')limparJulgarAnexo();
+  if(r!=='multa'){limparJulgarAnexo2('decisao');limparJulgarAnexo2('dosimetria');}
 }
-function onJulgarAnexo(input){
+
+// HTML de uma zona de upload (reutilizada para Decisão e Dosimetria)
+function anexoUploadHTML(key,label){
+  return `<div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">${label}</div>
+    <div id="jZone_${key}" onclick="document.getElementById('jInput_${key}').click()"
+      style="border:2px dashed var(--border-strong);border-radius:var(--radius-md);padding:12px;cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--bg-secondary)"
+      onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor=window['_julgAnexo_'+'${key}']?'var(--blue)':'var(--border-strong)'">
+      <i class="ti ti-cloud-upload" style="font-size:20px;flex-shrink:0;color:var(--blue)"></i>
+      <div style="min-width:0">
+        <div id="jLabel_${key}" style="font-size:12px;font-weight:500">Selecionar arquivo</div>
+        <div style="font-size:10px;color:var(--text-tertiary)">.pdf, .doc, .docx</div>
+      </div>
+      <input type="file" id="jInput_${key}" style="display:none" accept=".pdf,.doc,.docx" onchange="onJulgarAnexo2(this,'${key}')">
+    </div>
+    <div id="jPrev_${key}" style="display:none;margin-top:6px;padding:6px 10px;background:var(--blue-light);border:1px solid var(--blue-mid);border-radius:var(--radius-md);align-items:center;gap:6px">
+      <i class="ti ti-file-check" style="font-size:16px;color:var(--blue);flex-shrink:0"></i>
+      <span id="jNome_${key}" style="font-size:12px;color:var(--blue);font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+      <button onclick="limparJulgarAnexo2('${key}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;line-height:1;flex-shrink:0" title="Remover">×</button>
+    </div>
+  </div>`;
+}
+
+function onJulgarAnexo2(input,key){
   const file=input.files[0];if(!file)return;
   const ext=file.name.split('.').pop().toLowerCase();
   if(!['pdf','doc','docx'].includes(ext)){alert('Apenas .pdf, .doc ou .docx são aceitos.');input.value='';return;}
   if(file.size>10*1024*1024){alert('Arquivo muito grande. Máximo 10MB.');input.value='';return;}
-  window._julgAnexo=file;
-  document.getElementById('jAnexoLabel').textContent=file.name;
-  document.getElementById('jAnexoNome').textContent=file.name;
-  document.getElementById('jAnexoPreview').style.display='flex';
-  document.getElementById('jAnexoZone').style.borderColor='var(--blue)';
+  window['_julgAnexo_'+key]=file;
+  document.getElementById('jLabel_'+key).textContent=file.name;
+  document.getElementById('jNome_'+key).textContent=file.name;
+  document.getElementById('jPrev_'+key).style.display='flex';
+  const z=document.getElementById('jZone_'+key);if(z)z.style.borderColor='var(--blue)';
 }
-function limparJulgarAnexo(){
-  window._julgAnexo=null;
-  const inp=document.getElementById('jAnexoInput');if(inp)inp.value='';
-  const lbl=document.getElementById('jAnexoLabel');if(lbl)lbl.textContent='Clique para selecionar o arquivo';
-  const prev=document.getElementById('jAnexoPreview');if(prev)prev.style.display='none';
-  const zone=document.getElementById('jAnexoZone');if(zone)zone.style.borderColor='var(--border-strong)';
+function limparJulgarAnexo2(key){
+  window['_julgAnexo_'+key]=null;
+  const inp=document.getElementById('jInput_'+key);if(inp)inp.value='';
+  const lbl=document.getElementById('jLabel_'+key);if(lbl)lbl.textContent='Selecionar arquivo';
+  const prev=document.getElementById('jPrev_'+key);if(prev)prev.style.display='none';
+  const z=document.getElementById('jZone_'+key);if(z)z.style.borderColor='var(--border-strong)';
+}
+
+// Faz upload de um anexo do julgamento e devolve {url,nome,tipo}. Lança erro se falhar.
+async function uploadAnexoJulg(id,key){
+  const file=window['_julgAnexo_'+key];
+  if(!file)return{url:null,nome:null,tipo:null};
+  const ext=file.name.split('.').pop().toLowerCase();
+  const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+  const path=`multas/${id}/${key}_${Date.now()}_${safeName}`;
+  const{error:upErr}=await sb.storage.from('anexos-processos').upload(path,file,{cacheControl:'3600',upsert:true});
+  if(upErr)throw upErr;
+  const{data:urlData}=sb.storage.from('anexos-processos').getPublicUrl(path);
+  return{url:urlData.publicUrl,nome:file.name,tipo:ext};
 }
 
 async function saveJulg(){
@@ -952,29 +980,29 @@ async function saveJulg(){
   const btn=document.getElementById('bJ');
   btn.disabled=true;
 
-  // ── Upload do arquivo de multa ─────────────────────────────────────────────
-  let anexo_url=null,anexo_nome=null,anexo_tipo=null;
-  if(r==='multa'&&window._julgAnexo){
-    btn.innerHTML='<span class="spin-inline"></span> Enviando arquivo...';
-    const file=window._julgAnexo;
-    const ext=file.name.split('.').pop().toLowerCase();
-    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    const path=`multas/${id}/${Date.now()}_${safeName}`;
-    const{error:upErr}=await sb.storage.from('anexos-processos').upload(path,file,{cacheControl:'3600',upsert:true});
-    if(upErr){
-      // Se o bucket não existe, oferece continuar sem o arquivo
-      if(upErr.message.toLowerCase().includes('bucket')||upErr.message.toLowerCase().includes('not found')){
-        const ok=confirm('⚠️ Bucket de armazenamento não encontrado.\n\nDeseja continuar salvando o julgamento SEM o arquivo?\n\nPara habilitar uploads: Supabase > Storage > New bucket > "anexos-processos" (Public)');
+  // ── Upload dos documentos da multa (Decisão e Dosimetria) ──────────────────
+  let dec={url:null,nome:null,tipo:null}, dos={url:null,nome:null,tipo:null};
+  if(r==='multa'&&(window._julgAnexo_decisao||window._julgAnexo_dosimetria)){
+    btn.innerHTML='<span class="spin-inline"></span> Enviando arquivos...';
+    try{
+      dec=await uploadAnexoJulg(id,'decisao');
+      dos=await uploadAnexoJulg(id,'dosimetria');
+    }catch(upErr){
+      const msg=(upErr&&upErr.message?upErr.message:String(upErr)).toLowerCase();
+      const bucketFaltando=msg.includes('bucket')||msg.includes('not found');
+      if(bucketFaltando){
+        const ok=confirm('⚠️ Bucket de armazenamento não encontrado.\n\nDeseja continuar salvando o julgamento SEM os arquivos?\n\nPeça ao administrador para criar o bucket "anexos-processos" (Public) no Supabase e rodar o supabase_storage.sql.');
         if(!ok){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Concluir Julgamento';return;}
-      } else {
+        dec={url:null,nome:null,tipo:null};dos={url:null,nome:null,tipo:null};
+      }else{
         btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Concluir Julgamento';
-        alert('Erro ao enviar arquivo:\n'+upErr.message);return;
+        if(msg.includes('row-level')||msg.includes('security policy')||msg.includes('unauthorized')){
+          alert('Sem permissão para enviar arquivos no armazenamento.\n\nO administrador precisa executar o arquivo "supabase_storage.sql" no Supabase (SQL Editor) uma vez para liberar os uploads.\n\nDetalhe técnico: '+(upErr.message||upErr));
+        }else{
+          alert('Erro ao enviar arquivo:\n'+(upErr.message||upErr));
+        }
+        return;
       }
-    } else {
-      const{data:urlData}=sb.storage.from('anexos-processos').getPublicUrl(path);
-      anexo_url=urlData.publicUrl;
-      anexo_nome=file.name;
-      anexo_tipo=ext;
     }
   }
 
@@ -987,9 +1015,10 @@ async function saveJulg(){
     data_julgamento:dt,
     valor:r==='multa'?parseFloat(document.getElementById('jV').value):null,
     motivo_arquivamento:r==='arquivado'?document.getElementById('jM').value.trim():null,
-    anexo_multa_url:anexo_url,
-    anexo_multa_nome:anexo_nome,
-    anexo_multa_tipo:anexo_tipo,
+    anexo_decisao_url:dec.url, anexo_decisao_nome:dec.nome, anexo_decisao_tipo:dec.tipo,
+    anexo_dosimetria_url:dos.url, anexo_dosimetria_nome:dos.nome, anexo_dosimetria_tipo:dos.tipo,
+    // compatibilidade com telas que ainda leem anexo_multa_* (recebe a Decisão)
+    anexo_multa_url:dec.url, anexo_multa_nome:dec.nome, anexo_multa_tipo:dec.tipo,
   };
   const{error}=await sb.from('processos').update(upd).eq('id',id);
   if(error){
@@ -997,19 +1026,27 @@ async function saveJulg(){
     alert('Erro ao salvar: '+error.message);return;
   }
 
-  // ── Envia arquivo como mensagem no chat automaticamente ────────────────────
-  if(anexo_url){
+  // ── Envia os documentos como mensagens no chat automaticamente ─────────────
+  if(dec.url){
     await sb.from('mensagens').insert({
-      processo_id:id,autor_id:currentUser.id,autor_nome:currentUser.name,
-      autor_role:'analista',
-      texto:'📎 Documento do julgamento (multa) anexado para revisão do administrador:',
-      arquivo_url:anexo_url,arquivo_nome:anexo_nome,arquivo_tipo:anexo_tipo,
+      processo_id:id,autor_id:currentUser.id,autor_nome:currentUser.name,autor_role:'analista',
+      texto:'📎 Decisão (multa) anexada para revisão do administrador:',
+      arquivo_url:dec.url,arquivo_nome:dec.nome,arquivo_tipo:dec.tipo,
+      lida_admin:false,lida_analista:true,
+    });
+  }
+  if(dos.url){
+    await sb.from('mensagens').insert({
+      processo_id:id,autor_id:currentUser.id,autor_nome:currentUser.name,autor_role:'analista',
+      texto:'📎 Dosimetria (multa) anexada para revisão do administrador:',
+      arquivo_url:dos.url,arquivo_nome:dos.nome,arquivo_tipo:dos.tipo,
       lida_admin:false,lida_analista:true,
     });
   }
 
   window._julgandoId=null;
-  window._julgAnexo=null;
+  window._julgAnexo_decisao=null;
+  window._julgAnexo_dosimetria=null;
   closeModal();
   atualizarBadgeCorrecao();
   pgFila();
@@ -1227,7 +1264,7 @@ function renderCorrecao(){
         <td>${p.resultado_analista==='multa'?'<span class="badge badge-multa">⚖️ Multa</span>':'<span class="badge badge-arquivado">📁 Arquivamento</span>'}</td>
         <td style="font-size:12px">
           ${p.resultado_analista==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':(p.motivo_arquivamento||'').slice(0,40)+(p.motivo_arquivamento&&p.motivo_arquivamento.length>40?'…':'')}
-          ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>${(p.anexo_multa_nome||'Anexo').slice(0,30)}</a>`:''}
+          ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Decisão: ${(p.anexo_multa_nome||'Anexo').slice(0,22)}</a>`:''}${p.anexo_dosimetria_url?`<br><a href="${p.anexo_dosimetria_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Dosimetria: ${(p.anexo_dosimetria_nome||'Anexo').slice(0,22)}</a>`:''}
         </td>
         <td style="font-size:12px">${p.data_julgamento||'—'}</td>
         <td>
@@ -1401,7 +1438,7 @@ function buildTblJulgados(list){
     <td>${p.resultado_analista==='multa'?'<span class="badge badge-multa">⚖️ Multa</span>':'<span class="badge badge-arquivado">📁 Arquivado</span>'}</td>
     <td style="font-size:12px">
       ${p.resultado_analista==='multa'?'<strong style="color:var(--red)">'+fmtM(p.valor)+'</strong>':(p.motivo_arquivamento||'').slice(0,50)+(p.motivo_arquivamento&&p.motivo_arquivamento.length>50?'…':'')}
-      ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>${(p.anexo_multa_nome||'Anexo').slice(0,30)}</a>`:''}
+      ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Decisão: ${(p.anexo_multa_nome||'Anexo').slice(0,22)}</a>`:''}${p.anexo_dosimetria_url?`<br><a href="${p.anexo_dosimetria_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Dosimetria: ${(p.anexo_dosimetria_nome||'Anexo').slice(0,22)}</a>`:''}
     </td>
     <td style="font-size:12px">${p.data_julgamento||'—'}</td>
     <td style="font-size:12px">${p.data_correcao||'—'}</td>
@@ -1835,6 +1872,101 @@ async function atualizarBadgeChat(){
   if(!badge)return;
   if(n>0){badge.textContent=n;badge.classList.remove('hidden');}
   else{badge.classList.add('hidden');}
+}
+
+/* ═══════════════════════════════════════════════════
+   HISTÓRICO POR PROCESSO (andamentos, atos e pedidos)
+═══════════════════════════════════════════════════ */
+let _histProcId=null, _histProcNum=null;
+
+function escHist(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function abrirHistorico(procId, procNum){
+  _histProcId=procId; _histProcNum=procNum;
+  showModal(`<h3 style="margin:0 0 12px"><i class="ti ti-history" style="color:var(--blue)"></i> Histórico — <span style="font-size:13px;font-weight:400">${procNum}</span></h3>
+    <div id="histLista" style="max-height:44vh;overflow-y:auto;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius-md);padding:10px;background:var(--bg-secondary)">
+      <div style="text-align:center;color:var(--text-secondary);font-size:13px;padding:18px"><span class="spin-inline" style="border-top-color:var(--blue)"></span> Carregando histórico...</div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:start">
+        <div class="form-group" style="margin:0">
+          <label style="font-size:12px">Tipo</label>
+          <select id="histTipo" style="font-size:13px;padding:9px">
+            <option value="andamento">📌 Andamento</option>
+            <option value="ato">📄 Ato</option>
+            <option value="pedido">❓ Pedido</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:12px">Descrição</label>
+          <textarea id="histTexto" placeholder="Descreva o andamento, ato ou pedido..." style="min-height:62px;font-size:13px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal()">Fechar</button>
+      <button class="btn-primary" style="width:auto" id="btnAddHist" onclick="addAndamento()"><i class="ti ti-plus"></i> Adicionar ao histórico</button>
+    </div>`);
+  carregarAndamentos();
+}
+
+async function carregarAndamentos(){
+  const cont=document.getElementById('histLista'); if(!cont)return;
+  const{data,error}=await sb.from('andamentos').select('*').eq('processo_id',_histProcId).order('created_at');
+  if(error){
+    cont.innerHTML=`<div style="text-align:center;color:var(--red);font-size:13px;padding:16px">Erro ao carregar histórico.<br><span style="font-size:11px">${escHist(error.message)}</span><br><span style="font-size:11px;color:var(--text-secondary)">Verifique se a tabela "andamentos" foi criada (supabase_atualizacao.sql).</span></div>`;
+    return;
+  }
+  renderAndamentos(data||[]);
+}
+
+function renderAndamentos(list){
+  const cont=document.getElementById('histLista'); if(!cont)return;
+  if(!list.length){cont.innerHTML=`<div style="text-align:center;color:var(--text-tertiary);font-size:13px;padding:18px">Nenhum registro ainda.<br>Adicione o primeiro andamento abaixo.</div>`;return;}
+  const ic={andamento:'📌',ato:'📄',pedido:'❓'},lbl={andamento:'Andamento',ato:'Ato',pedido:'Pedido'};
+  cont.innerHTML=list.map(a=>{
+    let dt='';try{dt=new Date(a.created_at).toLocaleString('pt-BR');}catch(e){dt=a.created_at||'';}
+    const podeResponder=isAdmin()&&a.tipo==='pedido'&&!a.resposta;
+    return `<div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-secondary);margin-bottom:4px">
+        <span style="font-weight:600;color:var(--text-primary)">${ic[a.tipo]||''} ${lbl[a.tipo]||escHist(a.tipo)}</span>
+        <span>${escHist(a.autor_nome||'—')} · ${dt}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-primary);white-space:pre-wrap">${escHist(a.texto)}</div>
+      ${a.resposta?`<div style="margin-top:8px;padding:8px 10px;background:var(--green-light);border-left:3px solid var(--green);border-radius:4px">
+        <div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:2px"><i class="ti ti-corner-down-right"></i> Resposta${a.respondido_por?' · '+escHist(a.respondido_por):''}</div>
+        <div style="font-size:13px;white-space:pre-wrap">${escHist(a.resposta)}</div>
+      </div>`:''}
+      ${podeResponder?`<div style="margin-top:8px;text-align:right"><button class="btn-sm" onclick="responderAndamento('${a.id}')"><i class="ti ti-message-circle"></i> Responder</button></div>`:''}
+    </div>`;
+  }).join('');
+  cont.scrollTop=cont.scrollHeight;
+}
+
+async function addAndamento(){
+  const tipo=document.getElementById('histTipo').value;
+  const texto=document.getElementById('histTexto').value.trim();
+  if(!texto){alert('Descreva o andamento, ato ou pedido.');return;}
+  const btn=document.getElementById('btnAddHist'); btn.disabled=true; btn.innerHTML='<span class="spin-inline"></span> Salvando...';
+  const{error}=await sb.from('andamentos').insert({
+    processo_id:_histProcId, tipo, texto,
+    autor_nome:currentUser?.name||'—', autor_role:currentUser?.role||'—'
+  });
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-plus"></i> Adicionar ao histórico';
+  if(error){alert('Erro ao salvar: '+error.message);return;}
+  document.getElementById('histTexto').value='';
+  carregarAndamentos();
+}
+
+async function responderAndamento(id){
+  const resp=prompt('Resposta do administrador ao pedido:');
+  if(resp===null)return;
+  if(!resp.trim()){alert('Digite a resposta.');return;}
+  const{error}=await sb.from('andamentos').update({
+    resposta:resp.trim(), respondido_por:currentUser?.name||'Administrador', respondido_em:new Date().toISOString()
+  }).eq('id',id);
+  if(error){alert('Erro ao responder: '+error.message);return;}
+  carregarAndamentos();
 }
 
 function showModal(h,noBgClose){document.getElementById('modalContainer').innerHTML=`<div class="modal-overlay" ${noBgClose?'':'onclick="if(event.target===this)closeModal()"'}><div class="modal">${h}</div></div>`;}
