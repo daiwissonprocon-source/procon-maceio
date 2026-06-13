@@ -320,6 +320,7 @@ function doLogout(){
 
 function isAdmin(){return currentUser?.role==='admin';}
 function fmtM(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2});}
+function fmtData(d){if(!d)return '';const s=String(d).slice(0,10);const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:d;}
 function isAtr(p){if(p.situacao!=='em_julgamento'||!p.data_atribuicao)return false;return(Date.now()-new Date(p.data_atribuicao))/86400000>3;}
 function getANome(id){if(!id)return '<span style="color:var(--text-tertiary)">—</span>';const a=analistas.find(x=>x.id===id);return a?a.name:'—';}
 function getBadge(s){const c={pendente:'badge-pending',em_julgamento:'badge-inprogress',multa:'badge-multa',arquivado:'badge-arquivado',aguardando_correcao:'badge-correcao',julgado:'badge-julgado'};const l={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguard. Correção',julgado:'Julgado'};return`<span class="badge ${c[s]||''}">${l[s]||s}</span>`;}
@@ -579,7 +580,7 @@ function buildTbl(list){
     <td style="font-weight:600;font-size:12px">${p.numero}</td>
     <td style="font-size:12px">${p.fornecedor}</td>
     <td style="font-size:12px">${p.tema}</td>
-    <td style="font-size:12px">${p.data_abertura}</td>
+    <td style="font-size:12px">${fmtData(p.data_abertura)}</td>
     <td style="font-size:12px">${getANome(p.analista_id)}</td>
     <td>${getBadge(p.situacao)}${at?' <span class="badge badge-atrasado">Atrasado</span>':''}</td>
     ${adm?`<td style="font-size:12px">${p.situacao==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,35):p.situacao==='aguardando_correcao'?'<span style="color:#7B2D8B;font-weight:500">Aguard. revisão</span>':p.situacao==='julgado'?'<span style="color:#0C6B3A;font-weight:500">✓ Aprovado</span>':'—'}</td>`:''}
@@ -611,14 +612,14 @@ function verP(id){
   <table class="detail-table" style="width:100%">
     <tr><td>Fornecedor</td><td><strong>${p.fornecedor}</strong></td></tr>
     <tr><td>Tema</td><td>${p.tema}</td></tr>
-    <tr><td>Data Abertura</td><td>${p.data_abertura}</td></tr>
+    <tr><td>Data Abertura</td><td>${fmtData(p.data_abertura)}</td></tr>
     <tr><td>Analista</td><td>${getANome(p.analista_id)}</td></tr>
     <tr><td>Situação</td><td>${getBadge(p.situacao)}${isAtr(p)?' <span class="badge badge-atrasado">Atrasado</span>':''}</td></tr>
     ${p.situacao==='multa'||p.resultado_analista==='multa'?`<tr><td>Valor Multa</td><td style="color:var(--red);font-weight:600">${fmtM(p.valor)}</td></tr>`:''}
     ${p.situacao==='arquivado'||p.resultado_analista==='arquivado'?`<tr><td>Motivação Arquiv.</td><td>${p.motivo_arquivamento||''}</td></tr>`:''}
-    ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${p.data_atribuicao}</td></tr>`:''}
-    ${p.data_julgamento?`<tr><td>Data Julgamento</td><td>${p.data_julgamento}</td></tr>`:''}
-    ${p.data_correcao?`<tr><td>Data Aprovação</td><td>${p.data_correcao}</td></tr>`:''}
+    ${p.data_atribuicao?`<tr><td>Data Atribuição</td><td>${fmtData(p.data_atribuicao)}</td></tr>`:''}
+    ${p.data_julgamento?`<tr><td>Data Julgamento</td><td>${fmtData(p.data_julgamento)}</td></tr>`:''}
+    ${p.data_correcao?`<tr><td>Data Aprovação</td><td>${fmtData(p.data_correcao)}</td></tr>`:''}
     ${p.obs_correcao?`<tr><td>Obs. Correção</td><td style="color:#7B2D8B">${p.obs_correcao}</td></tr>`:''}
     ${(p.anexo_decisao_url||p.anexo_multa_url)?`<tr><td>Decisão</td><td><a href="${p.anexo_decisao_url||p.anexo_multa_url}" target="_blank" style="color:var(--blue);text-decoration:none"><i class="ti ti-paperclip"></i> ${p.anexo_decisao_nome||p.anexo_multa_nome||'Abrir documento'}</a></td></tr>`:''}
     ${p.anexo_dosimetria_url?`<tr><td>Dosimetria</td><td><a href="${p.anexo_dosimetria_url}" target="_blank" style="color:var(--blue);text-decoration:none"><i class="ti ti-paperclip"></i> ${p.anexo_dosimetria_nome||'Abrir documento'}</a></td></tr>`:''}
@@ -796,7 +797,7 @@ async function pgAtrib(){
       <th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th>
     </tr></thead><tbody>${data.map(p=>`<tr>
       <td><input type="checkbox" class="atcb" value="${p.id}"></td>
-      <td style="font-weight:500">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${p.data_abertura}</td>
+      <td style="font-weight:500">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${fmtData(p.data_abertura)}</td>
     </tr>`).join('')}</tbody></table></div>`:'<div class="empty-state"><i class="ti ti-checks"></i>Nenhum processo pendente.</div>'}
   </div>`);}
 
@@ -832,7 +833,7 @@ async function pgFila(){
     <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Atribuição</th><th>Status</th><th>Ação</th></tr></thead>
     <tbody>${_fila.length?_fila.map(p=>`<tr>
       <td style="font-weight:600">${p.numero}</td><td>${p.fornecedor}</td><td>${p.tema}</td>
-      <td>${p.data_abertura}</td><td>${p.data_atribuicao||'—'}</td>
+      <td>${fmtData(p.data_abertura)}</td><td>${fmtData(p.data_atribuicao)||'—'}</td>
       <td>${isAtr(p)?'<span class="badge badge-atrasado">Atrasado</span>':'<span class="badge badge-inprogress">Em fila</span>'}</td>
       <td style="display:flex;gap:4px;align-items:center">
         <button class="btn-blue-sm" onclick="julgar('${p.id}')"><i class="ti ti-gavel"></i> Julgar</button>
@@ -845,7 +846,7 @@ async function pgFila(){
     </tbody></table></div>
     ${conc.length?`<div style="margin-top:20px"><div class="card-title" style="margin-bottom:10px;font-size:13px">Concluídos por mim (${conc.length})</div>
     <div class="table-wrap"><table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Situação</th><th>Julgamento</th><th>Resultado</th></tr></thead>
-    <tbody>${conc.map(p=>`<tr><td>${p.numero}</td><td>${p.fornecedor}</td><td>${getBadge(p.situacao)}</td><td>${p.data_julgamento||'—'}</td>
+    <tbody>${conc.map(p=>`<tr><td>${p.numero}</td><td>${p.fornecedor}</td><td>${getBadge(p.situacao)}</td><td>${fmtData(p.data_julgamento)||'—'}</td>
     <td style="font-size:12px">${p.situacao==='multa'?fmtM(p.valor):(p.motivo_arquivamento||'').slice(0,40)}</td><td><button class="btn-sm" onclick="abrirChat('${p.id}','${p.numero}')" title="Mensagens"><i class="ti ti-message-circle"></i></button></td></tr>`).join('')}
     </tbody></table></div></div>`:''}
   </div>`);}
@@ -860,10 +861,10 @@ function julgar(id){
 <div style="background:var(--bg-secondary);border-radius:var(--radius-md);padding:12px;margin-bottom:16px">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
     <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Nº Processo</div><strong>${p.numero}</strong></div>
-    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Data Abertura</div>${p.data_abertura}</div>
+    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Data Abertura</div>${fmtData(p.data_abertura)}</div>
     <div style="grid-column:1/-1"><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Fornecedor</div><strong>${p.fornecedor}</strong></div>
     <div style="grid-column:1/-1"><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Tema</div>${p.tema}</div>
-    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Atribuído em</div>${p.data_atribuicao||'—'}</div>
+    <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Atribuído em</div>${fmtData(p.data_atribuicao)||'—'}</div>
     <div><div style="font-size:11px;color:var(--text-secondary);margin-bottom:2px">Dias em julgamento</div><span style="font-weight:600;color:${diasAtr>3?'var(--red)':'var(--blue)'}">${diasAtr} dia(s)</span></div>
   </div>
 </div>
@@ -1098,10 +1099,10 @@ function buildTblEdicao(list){
     <td style="font-weight:600;font-size:12px">${p.numero}</td>
     <td style="font-size:12px">${p.fornecedor}</td>
     <td style="font-size:12px">${p.tema}</td>
-    <td style="font-size:12px">${p.data_abertura}</td>
+    <td style="font-size:12px">${fmtData(p.data_abertura)}</td>
     <td style="font-size:12px">${getANome(p.analista_id)}</td>
     <td>${getBadge(p.situacao)}</td>
-    <td style="font-size:12px">${p.data_julgamento||'—'}</td>
+    <td style="font-size:12px">${fmtData(p.data_julgamento)||'—'}</td>
     <td style="font-size:12px">${p.situacao==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':p.situacao==='arquivado'?'<span style="color:var(--green)">Arquivado</span>':'—'}</td>
     <td><button class="btn-blue-sm" style="padding:4px 8px;font-size:11px" onclick="abrirEdicaoCompleta('${p.id}')"><i class="ti ti-pencil"></i> Editar</button></td>
   </tr>`).join('')}</tbody></table>`;
@@ -1266,7 +1267,7 @@ function renderCorrecao(){
           ${p.resultado_analista==='multa'?'<span style="color:var(--red);font-weight:600">'+fmtM(p.valor)+'</span>':(p.motivo_arquivamento||'').slice(0,40)+(p.motivo_arquivamento&&p.motivo_arquivamento.length>40?'…':'')}
           ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Decisão: ${(p.anexo_multa_nome||'Anexo').slice(0,22)}</a>`:''}${p.anexo_dosimetria_url?`<br><a href="${p.anexo_dosimetria_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Dosimetria: ${(p.anexo_dosimetria_nome||'Anexo').slice(0,22)}</a>`:''}
         </td>
-        <td style="font-size:12px">${p.data_julgamento||'—'}</td>
+        <td style="font-size:12px">${fmtData(p.data_julgamento)||'—'}</td>
         <td>
           <button class="btn-primary" style="width:auto;padding:4px 8px;font-size:11px;margin-bottom:4px;margin-top:0;display:inline-flex" onclick="aprovarCorrecao('${p.id}')"><i class="ti ti-check"></i> Aprovar</button>
           <button class="btn-blue-sm" style="padding:4px 8px;font-size:11px;margin-bottom:4px" onclick="editarCorrecao('${p.id}')"><i class="ti ti-pencil"></i> Corrigir</button>
@@ -1440,8 +1441,8 @@ function buildTblJulgados(list){
       ${p.resultado_analista==='multa'?'<strong style="color:var(--red)">'+fmtM(p.valor)+'</strong>':(p.motivo_arquivamento||'').slice(0,50)+(p.motivo_arquivamento&&p.motivo_arquivamento.length>50?'…':'')}
       ${p.anexo_multa_url?`<br><a href="${p.anexo_multa_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Decisão: ${(p.anexo_multa_nome||'Anexo').slice(0,22)}</a>`:''}${p.anexo_dosimetria_url?`<br><a href="${p.anexo_dosimetria_url}" target="_blank" style="font-size:11px;color:var(--blue);display:inline-flex;align-items:center;gap:3px;margin-top:3px;text-decoration:none"><i class="ti ti-paperclip"></i>Dosimetria: ${(p.anexo_dosimetria_nome||'Anexo').slice(0,22)}</a>`:''}
     </td>
-    <td style="font-size:12px">${p.data_julgamento||'—'}</td>
-    <td style="font-size:12px">${p.data_correcao||'—'}</td>
+    <td style="font-size:12px">${fmtData(p.data_julgamento)||'—'}</td>
+    <td style="font-size:12px">${fmtData(p.data_correcao)||'—'}</td>
     <td style="font-size:11px;color:${p.obs_correcao?'#7B2D8B':'var(--text-tertiary)'}">
       ${p.obs_correcao?'<i class="ti ti-edit" title="'+p.obs_correcao+'"></i> '+p.obs_correcao.slice(0,30)+(p.obs_correcao.length>30?'…':''):'<span style="opacity:.4">Sem correção</span>'}
     </td>
@@ -1842,7 +1843,7 @@ ${filtros?`<div class="filtros">Filtros: ${filtros}</div>`:''}
 </div>
 <table><thead><tr><th>Nº Processo</th><th>Fornecedor</th><th>Tema</th><th>Abertura</th><th>Analista</th><th>Situação</th><th>Resultado</th><th>Julgamento</th></tr></thead>
 <tbody>${list.map(p=>{const cl={pendente:'pend',em_julgamento:'emj',multa:'mult',arquivado:'arq'}[p.situacao]||'';const lb={pendente:'Pendente',em_julgamento:'Em julgamento',multa:'Multa',arquivado:'Arquivado'}[p.situacao]||p.situacao;
-return`<tr><td><strong>${p.numero}</strong></td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${p.data_abertura}</td><td>${analistas.find(a=>a.id===p.analista_id)?.name||'—'}</td><td><span class="badge ${cl}">${lb}</span></td><td style="font-size:11px">${p.situacao==='multa'?parseFloat(p.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,60):'—'}</td><td>${p.data_julgamento||'—'}</td></tr>`;
+return`<tr><td><strong>${p.numero}</strong></td><td>${p.fornecedor}</td><td>${p.tema}</td><td>${fmtData(p.data_abertura)}</td><td>${analistas.find(a=>a.id===p.analista_id)?.name||'—'}</td><td><span class="badge ${cl}">${lb}</span></td><td style="font-size:11px">${p.situacao==='multa'?parseFloat(p.valor||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):p.situacao==='arquivado'?(p.motivo_arquivamento||'').slice(0,60):'—'}</td><td>${fmtData(p.data_julgamento)||'—'}</td></tr>`;
 }).join('')}</tbody></table>
 <div class="footer">PROCON Maceió — Sistema de Gestão de Processos | ${list.length} registros</div>
 </body></html>`;
