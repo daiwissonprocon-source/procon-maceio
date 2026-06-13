@@ -1808,9 +1808,9 @@ async function aprovarCorrecao(id){
   if(!confirm('Aprovar este julgamento? O processo será movido para Julgados.'))return;
   const p=_corrProcs.find(x=>x.id===id);
   if(!p)return;
-  // situacao final = resultado_analista (multa ou arquivado), agora como "julgado"
   const{error}=await sb.from('processos').update({situacao:'julgado',data_correcao:new Date().toISOString().slice(0,10)}).eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
+  await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:'Julgamento aprovado pelo administrador.',autor_nome:currentUser.name,autor_role:'admin'});
   _corrProcs=_corrProcs.filter(x=>x.id!==id);
   atualizarBadgeCorrecao();
   renderCorrecao();
@@ -1821,6 +1821,8 @@ async function devolverCorrecao(id){
   if(motivo===null)return; // cancelou
   const{error}=await sb.from('processos').update({situacao:'em_julgamento',obs_correcao:motivo||'Devolvido para revisão'}).eq('id',id);
   if(error){alert('Erro: '+error.message);return;}
+  const txtDev='Processo devolvido ao analista para revisão.'+(motivo?` Motivo: ${motivo}`:'');
+  await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:txtDev,autor_nome:currentUser.name,autor_role:'admin'});
   _corrProcs=_corrProcs.filter(x=>x.id!==id);
   atualizarBadgeCorrecao();
   renderCorrecao();
@@ -1887,6 +1889,9 @@ async function salvarCorrecao(){
   };
   const{error}=await sb.from('processos').update(upd).eq('id',id);
   if(error){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Salvar e Aprovar';alert('Erro: '+error.message);return;}
+  const obs=document.getElementById('ccObs').value.trim();
+  const txtCorr='Julgamento corrigido e aprovado pelo administrador.'+(obs?` Obs: ${obs}`:'');
+  await sb.from('andamentos').insert({processo_id:id,tipo:'andamento',texto:txtCorr,autor_nome:currentUser.name,autor_role:'admin'});
   window._corrigindoId=null;
   _corrProcs=_corrProcs.filter(x=>x.id!==id);
   atualizarBadgeCorrecao();
