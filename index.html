@@ -824,7 +824,10 @@ async function pgProc(){
 function renderProcPage(ps){
   setC(`<div class="card">
     <div class="card-header"><div class="card-title">Processos Administrativos</div>
-    ${isAdmin()?'<button class="btn-blue-sm" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo Processo</button>':''}
+    <div style="display:flex;gap:8px">
+      ${isAdmin()?'<button class="btn-blue-sm" onclick="exportarExcel()" title="Exportar lista atual para Excel"><i class="ti ti-table-export"></i> Exportar Excel</button>':''}
+      ${isAdmin()?'<button class="btn-blue-sm" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo Processo</button>':''}
+    </div>
     </div>
     ${isAdmin()?`<div class="filter-bar">
       <input type="text" id="fB" placeholder="Buscar fornecedor, nº ou tema..." style="flex:1;min-width:180px" oninput="cliFilter()">
@@ -909,6 +912,34 @@ function cliFilter(){
 function limparFiltros(){
   ['fB','fS','fA','fCampo','fDe','fAte'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   cliFilter();
+}
+function exportarExcel(){
+  const list=_procFiltered.length?_procFiltered:_allProc;
+  if(!list.length){alert('Nenhum processo para exportar.');return;}
+  const sitLabel={pendente:'Pendente',em_julgamento:'Em Julgamento',multa:'Multa',arquivado:'Arquivado',aguardando_correcao:'Aguardando Correção',julgado:'Julgado'};
+  const headers=['Nº Processo','Fornecedor','Tema','Data Abertura','Analista','Situação','Resultado','Valor Multa (R$)','Motivo Arquivamento','Data Atribuição','Data Julgamento','Data Aprovação'];
+  const rows=list.map(p=>[
+    p.numero,
+    p.fornecedor,
+    p.tema||'',
+    fmtData(p.data_abertura)||'',
+    analistas.find(a=>a.id===p.analista_id)?.name||'',
+    sitLabel[p.situacao]||p.situacao,
+    p.resultado_analista||'',
+    (p.situacao==='multa'||p.resultado_analista==='multa')?parseFloat(p.valor||0).toFixed(2):'',
+    p.motivo_arquivamento||'',
+    fmtData(p.data_atribuicao)||'',
+    fmtData(p.data_julgamento)||'',
+    fmtData(p.data_correcao)||''
+  ]);
+  const csv=[headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`processos-procon-${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function verP(id){
