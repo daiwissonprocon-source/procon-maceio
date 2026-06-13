@@ -848,7 +848,7 @@ function renderProcPage(ps){
   setC(`<div class="card">
     <div class="card-header"><div class="card-title">Processos Administrativos</div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn-sec" style="padding:5px 10px;font-size:12px" onclick="_toggleGrupo()" title="Alternar entre lista e agrupamento por fornecedor"><i class="ti ti-${_procGroupMode?'list':'building-store'}"></i> ${_procGroupMode?'Lista':'Agrupar'}</button>
+      <button class="btn-sec" style="padding:5px 10px;font-size:12px${_procGroupMode?';border-color:var(--blue);color:var(--blue)':''}" onclick="_toggleGrupo()" title="Alternar entre lista e agrupamento por fornecedor"><i class="ti ti-${_procGroupMode?'list':'building-store'}"></i> ${_procGroupMode?'Desagrupar':'Agrupar'}</button>
       ${isAdmin()?'<button class="btn-blue-sm" onclick="exportarExcel()" title="Exportar lista atual para Excel"><i class="ti ti-table-export"></i> Exportar Excel</button>':''}
       ${isAdmin()?'<button class="btn-blue-sm" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo Processo</button>':''}
     </div>
